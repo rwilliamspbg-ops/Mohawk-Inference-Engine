@@ -166,8 +166,52 @@ async def execute(req: ExecRequest):
 
 @app.get('/metrics')
 async def get_metrics():
+    # expose computed percentiles based on histogram buckets
     with metrics_lock:
-        return JSONResponse(content=dict(metrics))
+        out = dict(metrics)
+    # compute percentiles if histogram buckets present
+    def compute_percentiles(prefix):
+        # build sorted buckets from metrics keys
+        hist_keys = [k for k in out.keys() if k.startswith(f"{prefix}_hist_")]
+        if not hist_keys:
+            return None
+        # extract bucket values and counts
+        buckets = []
+        for k in hist_keys:
+            b = k.split('_')[-1]
+            cnt = out.get(k, 0)
+            try:
+                if b == '+Inf':
+                    val = float('inf')
+                else:
+                    val = float(b)
+                buckets.append((val, cnt))
+            except Exception:
+                continue
+        buckets.sort(key=lambda x: x[0])
+        total = sum(c for _, c in buckets)
+        if total == 0:
+            return None
+        # cumulative to find percentile
+        def percentile(p):
+            target = total * p
+            c = 0
+            for val, cnt in buckets:
+                c += cnt
+                if c >= target:
+                    return val
+            return buckets[-1][0]
+
+        return {'p50': percentile(0.5), 'p95': percentile(0.95), 'p99': percentile(0.99)}
+
+    # try common metric prefixes
+    for metric_prefix in ['preload_time', 'execute_time']:
+        ps = compute_percentiles(metric_prefix)
+        if ps:
+            out[f"{metric_prefix}_p50"] = ps['p50']
+            out[f"{metric_prefix}_p95"] = ps['p95']
+            out[f"{metric_prefix}_p99"] = ps['p99']
+    return JSONResponse(content=out)
 
 if __name__ == '__main__':
     import argparse

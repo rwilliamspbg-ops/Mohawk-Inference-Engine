@@ -10,11 +10,13 @@ Quickstart:
 python -m pip install -r prototype/requirements.txt
 ```
 
-2. Start two workers in separate terminals:
+2. Start two workers in separate terminals (secure worker available):
 
 ```bash
+# insecure worker (no encryption)
 python prototype/worker.py --port 8001
-python prototype/worker.py --port 8002
+# secure worker (handshake + AEAD) listens on a separate port
+python prototype/worker_secure.py --port 8003
 ```
 
 3. Run the demo:
@@ -25,4 +27,4 @@ python prototype/run_demo.py
 
 Notes:
 - This is a functional prototype illustrating partitioning, preload, and remote execution. It uses pickle-serialized weights and inputs for simplicity.
-- PQC and secure transport are not implemented in this demo; the architecture doc outlines where PQC would integrate. The code is organized so an AEAD layer can be added to the transport easily.
+-- A secure path using X25519 + optional liboqs hybrid KEM is scaffolded in `prototype/crypto.py` and `prototype/worker_secure.py`. To enable full hybrid PQC tests, install liboqs / pyOQS in the environment (see `docs/PQC_INTEGRATION.md`).
