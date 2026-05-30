@@ -1,0 +1,11 @@
+{
+  "name": "Mohawk Inference Devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspace",
+  "settings": {},
+  "extensions": [],
+  "forwardPorts": [8003],
+  "postCreateCommand": "./.devcontainer/post_create.sh"
+}

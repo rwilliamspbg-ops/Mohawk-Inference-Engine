@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_liboqs:
+        description: Build liboqs from source before running tests
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      OQS_INSTALL_PATH: /usr/local
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libssl-dev pkg-config
+      - name: Optionally build liboqs
+        if: github.event_name == 'workflow_dispatch' && inputs.build_liboqs || vars.BUILD_LIBOQS == 'true'
+        run: |
+          git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs
+          mkdir -p /tmp/liboqs/build && cd /tmp/liboqs/build
+          cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+          python -m pip install liboqs-python
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r prototype/requirements.txt
+      - name: Run tests
+        run: |
+          pytest -q

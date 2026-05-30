@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+numpy
+requests
+cryptography
+pytest
+httpx2
