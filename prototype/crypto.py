@@ -38,33 +38,19 @@ class PQCAdapter:
         self.oqs_supported = False
         self.oqs_alg = oqs_alg
         self.oqs_public = b''
-        # Try to instantiate an OQS KEM object if available. We do this
-        # defensively because different pyOQS versions have slightly
-        # different APIs across releases.
         if OQS_AVAILABLE:
             try:
-                # The `oqs` module (pyOQS) exposes a KEM class; attempting
-                # to create one here. If the environment doesn't support
-                # the native lib, this will silently fall back.
-                self.kem = _oqs.KEM(self.oqs_alg)
-                # Depending on the pyOQS API, `generate_keypair` may return
-                # the public key and store the private key internally.
-                # We try to call it and capture the public bytes; if that
-                # fails we simply mark OQS unsupported.
-                try:
-                    pub = self.kem.generate_keypair()
-                    # If generate_keypair returned a tuple (pub, priv),
-                    # accept the first element.
-                    if isinstance(pub, tuple):
-                        pub = pub[0]
-                    self.oqs_public = pub
-                    self.oqs_supported = True
-                except Exception:
-                    # Some pyOQS versions require different calls; if any
-                    # step fails, treat OQS as unavailable for now.
-                    self.kem = None
-                    self.oqs_public = b''
-                    self.oqs_supported = False
+                kem_cls = getattr(_oqs, 'KeyEncapsulation', None)
+                if kem_cls is None:
+                    kem_cls = getattr(_oqs, 'KEM', None)
+                if kem_cls is None:
+                    raise RuntimeError('No OQS KEM class available')
+                self.kem = kem_cls(self.oqs_alg)
+                pub = self.kem.generate_keypair()
+                if isinstance(pub, tuple):
+                    pub = pub[0]
+                self.oqs_public = pub
+                self.oqs_supported = True
             except Exception:
                 self.kem = None
                 self.oqs_public = b''

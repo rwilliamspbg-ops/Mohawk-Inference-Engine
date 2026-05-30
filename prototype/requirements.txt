@@ -4,4 +4,4 @@ numpy
 requests
 cryptography
 pytest
-httpx
+httpx2

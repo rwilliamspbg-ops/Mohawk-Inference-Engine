@@ -27,4 +27,5 @@ python prototype/run_demo.py
 
 Notes:
 - This is a functional prototype illustrating partitioning, preload, and remote execution. It uses pickle-serialized weights and inputs for simplicity.
--- A secure path using X25519 + optional liboqs hybrid KEM is scaffolded in `prototype/crypto.py` and `prototype/worker_secure.py`. To enable full hybrid PQC tests, install liboqs / pyOQS in the environment (see `docs/PQC_INTEGRATION.md`).
+- A secure path using X25519 + optional liboqs hybrid KEM is scaffolded in [prototype/crypto.py](prototype/crypto.py) and [prototype/worker_secure.py](prototype/worker_secure.py). To enable full hybrid PQC tests, install native liboqs plus the Python binding and set `OQS_INSTALL_PATH=/usr/local` (see [docs/PQC_INTEGRATION.md](docs/PQC_INTEGRATION.md)).
+- The in-process integration tests can be run with `pytest -q prototype/test_secure_hybrid_integration.py prototype/test_concurrency_smoke.py` once the environment is prepared.
