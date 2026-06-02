@@ -1,0 +1,38 @@
+# Dockerfile for Mohawk Controller
+FROM python:3.12-slim AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    libssl-dev \
+    pkg-config \
+    && curl -sS https://liboqs.org/install.sh | bash \
+    && ldconfig /usr/local/lib
+
+# Create non-root user for security
+RUN useradd -u 1000 -g 1000 appuser
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY prototype/ ./prototype/
+
+# Set ownership for non-root user
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+# Expose controller port
+EXPOSE 9000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:9000/health || exit 1
+
+# Run controller (in production, would use proper entrypoint)
+CMD ["python", "-c", "from prototype.controller import Controller; print('Controller ready')"]
