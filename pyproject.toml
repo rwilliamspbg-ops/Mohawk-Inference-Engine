@@ -60,51 +60,13 @@ include = ["mohawk_gui*"]
 [tool.setuptools.package-data]
 mohawk_gui = ["resources/**/*", "*.toml", "*.conf"]
 
-# =============================================================================
-# PYINSTALLER CONFIGURATION
-# =============================================================================
-
-[tool.pyinstaller]
-name = "Mohawk Inference Engine"
-description = "Production-ready GUI for multi-device inference management"
-version = "2.1.0"
-icon = "resources/icons/app.ico"  # Windows icon
-onefile = true                    # Single executable
-addindent = 2                     # Indentation for specs
-hiddenimports = [
-    "mohawk_gui.main",
-    "mohawk_gui.auth_manager",
-    "mohawk_gui.connection_pool",
-    "mohawk_gui.metrics_buffer",
-    "mohawk_gui.error_recovery",
-    "mohawk_gui.monitoring",
-    "mohawk_gui.audit_logger",
-    "mohawk_gui.main_window",
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "security: marks tests as security tests",
+    "crypto: marks tests as cryptography tests",
 ]
-datas = [
-    "mohawk_gui/resources/*:*",
-    "mohawk_gui/resources/icons/*:*",
-    "mohawk_gui/resources/themes/*:*",
-]
-# Add data files for Linux/Mac
-add_data = [
-    ("mohawk_gui/resources/config.toml", "config.toml"),
-]
-
-[tool.pyinstaller.analyse]
-imported_packages = []
-
-[tool.pyinstaller.build]
-path_excludes = ["*.pyc", "__pycache__", "*.egg-info"]
-
-# =============================================================================
-# DOCKER CONFIGURATION
-# =============================================================================
-
-[tool.docker]
-image_name = "mohawk-inference-gui"
-image_tag = "latest"
-base_image = "python:3.11-slim"
-workdir = "/app"
-expose_ports = ["8003", "8443"]
-healthcheck_path = "/health"
+testpaths = ["prototype", "tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
