@@ -4,7 +4,7 @@ import uvicorn
 import asyncio
 import pickle
 from typing import Dict
-from prototype.model_tools_v2 import ToyModel
+from prototype.model_tools import ToyModel
 import base64
 from prototype.crypto_improved import PQCAdapter, ReplayProtectedAEAD, AEAD, b64, ub64
 from prototype.telemetry import Telemetry
@@ -156,7 +156,7 @@ async def preload(req: PreloadRequest):
             blob = base64.b64decode(req.weights_b64)
         
         # Deserialize weights safely (no pickle)
-        from prototype.model_tools_v2 import WeightSlice
+        from prototype.model_tools import WeightSlice
         slice_obj = WeightSlice.from_bytes(blob, start=req.manifest["start"], 
                                            end=req.manifest["end"])
         

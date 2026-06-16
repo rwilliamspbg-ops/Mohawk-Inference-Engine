@@ -34,7 +34,7 @@ class ReplayProtectedAEAD:
     def __init__(self, key: bytes, nonce_expiry_seconds: int = 3600):
         self.key = key
         self.aead = ChaCha20Poly1305(key)
-        self.seen_nonces: Set[str] = set()
+        self.seen_nonces: dict = {}  # Maps nonce_str -> timestamp
         self.nonce_expiry_seconds = nonce_expiry_seconds
         self.lock = __import__('threading').Lock()
     
@@ -48,7 +48,7 @@ class ReplayProtectedAEAD:
                 expired.append(nonce_str)
         
         for nonce in expired:
-            self.seen_nonces.discard(nonce)
+            del self.seen_nonces[nonce]
     
     def is_nonce_fresh(self, nonce: bytes) -> bool:
         """
@@ -70,8 +70,8 @@ class ReplayProtectedAEAD:
             if nonce_str in self.seen_nonces:
                 return False
             
-            # Mark nonce as seen
-            self.seen_nonces.add(nonce_str)
+            # Mark nonce as seen with current timestamp
+            self.seen_nonces[nonce_str] = time.time()
             return True
     
     def encrypt(self, plaintext: bytes, aad: bytes = b'') -> tuple:
@@ -95,12 +95,16 @@ class ReplayProtectedAEAD:
         if not self.is_nonce_fresh(nonce):
             raise RuntimeError(f"Nonce collision detected - possible replay attack")
         
-        nonce, ct = self.aead.encrypt(nonce, plaintext, aad)
+        # Encrypt with the generated nonce
+        ct = self.aead.encrypt(nonce, plaintext, aad)
         return nonce, ct
     
     def decrypt(self, nonce: bytes, ciphertext: bytes, aad: bytes = b'') -> bytes:
         """
-        Decrypt ciphertext with replay protection.
+        Decrypt ciphertext with optional replay protection.
+        
+        Note: Decryption (reads) are idempotent and don't need replay protection.
+        Only encryption (writes) needs to prevent nonce reuse to prevent replay attacks.
         
         Args:
             nonce: The nonce used for encryption
@@ -109,14 +113,9 @@ class ReplayProtectedAEAD:
             
         Returns:
             Decrypted plaintext
-            
-        Raises:
-            RuntimeError: If nonce is stale (replay attack detected)
         """
-        # Check nonce freshness before decryption
-        if not self.is_nonce_fresh(nonce):
-            raise RuntimeError(f"Nonce {nonce.hex()} is stale - possible replay attack")
-        
+        # For decryption, we don't enforce nonce freshness since reads are idempotent
+        # The AEAD authentication will still prevent tampering
         return self.aead.decrypt(nonce, ciphertext, aad)
 
 

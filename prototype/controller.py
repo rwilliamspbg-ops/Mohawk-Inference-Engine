@@ -1,7 +1,8 @@
 import requests
 import base64
 import pickle
-from prototype.model_tools_v2 import ToyModel, WeightSlice
+import numpy as np
+from prototype.model_tools import ToyModel, WeightSlice
 from typing import List
 
 
@@ -119,7 +120,7 @@ class Controller:
         Returns:
             Output tensor after passing through all slices
         """
-        from prototype.model_tools_v2 import ToyModel
+        from prototype.model_tools import ToyModel
         
         current = x
         

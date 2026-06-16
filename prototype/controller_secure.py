@@ -1,7 +1,7 @@
 import requests
 import base64
 import pickle
-from prototype.model_tools_v2 import ToyModel, WeightSlice
+from prototype.model_tools import ToyModel, WeightSlice
 from prototype.crypto_improved import PQCAdapter, ReplayProtectedAEAD, AEAD, b64, ub64
 import threading
 import time

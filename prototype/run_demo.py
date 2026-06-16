@@ -1,5 +1,5 @@
 import numpy as np
-from prototype.model_tools_v2 import ToyModel, WeightSlice
+from prototype.model_tools import ToyModel, WeightSlice
 from prototype.controller import Controller
 
 

@@ -4,7 +4,7 @@ import uvicorn
 import asyncio
 import numpy as np
 from typing import Dict
-from prototype.model_tools_v2 import ToyModel, WeightSlice
+from prototype.model_tools import ToyModel, WeightSlice
 import base64
 import time
 

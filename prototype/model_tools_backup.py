@@ -118,19 +118,17 @@ class ToyModel:
         weights = self.weights[start_layer:end_layer]
         shapes = self.get_slice_shapes(start_layer, end_layer)
         return WeightSlice(
-            start_layer=start_layer,
-            end_layer=end_layer,
+            start=start_layer,
+            end=end_layer,
             weights=weights,
             version=self.version
         )
     
     @staticmethod
-    def get_slice_shapes(start: int, end: int) -> Dict[str, Tuple[int, ...]]:
+    def get_slice_shapes(start: int, end: list) -> Dict[str, Tuple[int, ...]]:
         """Get shapes for a slice (used during partitioning)."""
-        # Calculate number of layers in this slice
-        num_layers = end - start
         return {f'layer_{start}_{i}_weight': ToyModel._infer_shape(i) 
-                for i in range(num_layers)}
+                for i in range(len(end))}
     
     @staticmethod
     def _infer_shape(layer_idx: int) -> Tuple[int, ...]:
