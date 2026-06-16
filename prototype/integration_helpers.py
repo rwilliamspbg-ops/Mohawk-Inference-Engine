@@ -1,8 +1,8 @@
-from urllib.parse import urlparse
 import asyncio
+from urllib.parse import urlparse
 
-import requests
 import httpx
+import requests
 
 from prototype import worker_secure
 
@@ -45,8 +45,11 @@ class InProcessWorkerTransport:
 
     def post(self, url, json=None, timeout=None, **kwargs):
         path = urlparse(url).path or "/"
+
         async def _post():
-            async with httpx.AsyncClient(transport=self.client._transport, base_url=self.client.base_url) as async_client:
+            async with httpx.AsyncClient(
+                transport=self.client._transport, base_url=self.client.base_url
+            ) as async_client:
                 return await async_client.post(path, json=json)
 
         response = asyncio.run(_post())

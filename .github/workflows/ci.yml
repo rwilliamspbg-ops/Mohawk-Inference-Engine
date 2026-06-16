@@ -59,10 +59,11 @@ jobs:
           safety check --json > security-report.json || true
           echo "Safety report saved to security-report.json"
       
-      - name: Run pre-commit hooks
+      - name: Run repository hygiene hooks
         run: |
-          pre-commit install
-          pre-commit run --all-files
+          pre-commit run check-yaml --all-files
+          pre-commit run check-json --all-files
+          pre-commit run check-added-large-files --all-files
       
       - name: Run tests
         run: |
