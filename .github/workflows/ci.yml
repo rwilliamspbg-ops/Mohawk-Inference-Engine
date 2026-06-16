@@ -70,7 +70,7 @@ jobs:
           pytest -q prototype/test_security_fixes.py prototype/test_oqs_hybrid.py prototype/test_secure_hybrid_integration.py prototype/test_concurrency_smoke.py prototype/test_secure_run.py -v
       
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: |
