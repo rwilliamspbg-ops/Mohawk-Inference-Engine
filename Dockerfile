@@ -1,4 +1,4 @@
-# Mohawk Inference Engine Worker - Production Docker Image
+# Mohawk Inference Engine GUI - Production Docker Image
 # Version: 2.1.0
 # Cross-platform: Windows, Linux, macOS
 
@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # System libraries for PyQt6 (if needed)
+    # System libraries for PyQt6
     libgl1-mesa-glx \
     libxkbcommon-x11-0 \
     libdbus-1-3 \
@@ -24,8 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
     gcc \
     git \
-    # ONNX runtime for model inference
-    onnxruntime>=1.16.0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -34,7 +32,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY mohawk_gui/ ./mohawk_gui/
-COPY prototype/ ./prototype/
 
 # Create non-root user for security (production best practice)
 RUN groupadd mohawk && \
@@ -50,11 +47,26 @@ RUN mkdir -p /app/certs /app/logs /app/models && \
 COPY mohawk_gui/config.toml ./config.toml
 
 # Expose ports
-EXPOSE 8003
+EXPOSE 8003 8443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import sys; print('OK'); sys.exit(0)" || exit 1
+    CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Default command - can be overridden at runtime
-CMD ["python", "prototype/worker_secure.py", "--port", "8003"]
+CMD ["python", "mohawk_gui/main.py", "--host", "0.0.0.0", "--port", "8003"]
+
+# =============================================================================
+# Multi-stage build for smaller image (optional)
+# =============================================================================
+# FROM debian:bookworm-slim AS base
+# RUN apt-get update && apt-get install -y \
+#     python3.11 \
+#     python3-pip \
+#     libgl1-mesa-glx \
+#     libxkbcommon-x11-0 \
+#     libdbus-1-3 \
+#     && rm -rf /var/lib/apt/lists/*
+# 
+# WORKDIR /app
+# COPY --from=python:3.11-slim-bookworm /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/

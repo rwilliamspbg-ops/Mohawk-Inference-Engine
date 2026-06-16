@@ -1,0 +1,98 @@
+# Mohawk Inference Engine - Docker Compose Production Setup
+# Version: 2.1.0
+# Cross-platform: Windows, Linux, macOS
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # MOHAWK GUI SERVICE
+  # =============================================================================
+  mohawk-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PY_VERSION=3.11
+    container_name: mohawk-gui
+    ports:
+      - "8003:8003"    # WebSocket metrics endpoint
+      - "8443:8443"    # HTTPS (if SSL enabled)
+    volumes:
+      - ./mohawk_gui:/app/mohawk_gui:ro
+      - ./certs:/app/certs:ro
+      - ./logs:/app/logs
+      - ./models:/app/models:ro
+    environment:
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-8003}
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+      - JWT_KEY_FILE=/app/certs/auth_key.pem
+    command: >
+      python mohawk_gui/main.py \
+      --host ${HOST:-0.0.0.0} \
+      --port ${PORT:-8003} \
+      --key-file /app/certs/auth_key.pem
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; print('OK'); sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - mohawk-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # =============================================================================
+  # MOHAWK WORKER SERVICE (Secure)
+  # =============================================================================
+  mohawk-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: mohawk-worker
+    ports:
+      - "8003:8003"   # Inference endpoint
+    volumes:
+      - ./models:/app/models:ro
+      - ./certs:/app/certs:ro
+      - ./logs:/app/logs
+    environment:
+      - WORKER_PORT=8003
+      - SSL_ENABLED=${SSL_ENABLED:-true}
+      - JWT_KEY_FILE=/app/certs/auth_key.pem
+    command: >
+      python prototype/worker_secure.py \
+      --port 8003 \
+      --ssl-enabled ${SSL_ENABLED:-true}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; print('OK'); sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - mohawk-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  mohawk-network:
+    driver: bridge
+    name: mohawk-inference-network
