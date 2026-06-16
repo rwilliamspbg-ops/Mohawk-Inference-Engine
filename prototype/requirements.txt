@@ -1,7 +1,17 @@
-fastapi
-uvicorn
-numpy
-requests
-cryptography
-pytest
-httpx2
+fastapi>=0.104.0
+uvicorn>=0.24.0
+numpy>=1.24.0
+requests>=2.31.0
+cryptography>=41.0.0
+pytest>=7.4.0
+httpx>=0.25.0
+pydantic>=2.5.0
+
+# Optional: liboqs for PQC support (install separately)
+# liboqs-python>=1.0.0
+
+# Optional: pre-commit hooks
+# black>=23.12.1
+# isort>=5.12.0
+# flake8>=6.1.0
+# mypy>=1.7.1

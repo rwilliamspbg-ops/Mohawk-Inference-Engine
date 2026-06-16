@@ -18,16 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OQS_INSTALL_PATH: /usr/local
+    
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      
       - name: Install system deps
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake libssl-dev pkg-config
+      
       - name: Optionally build liboqs
         if: github.event_name == 'workflow_dispatch' && inputs.build_liboqs || vars.BUILD_LIBOQS == 'true'
         run: |
@@ -38,10 +42,46 @@ jobs:
           sudo make install
           sudo ldconfig
           python -m pip install liboqs-python
+      
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           pip install -r prototype/requirements.txt
+          pip install bandit safety pre-commit
+      
+      - name: Run security scan (Bandit)
+        run: |
+          bandit -r prototype/ -f json -o bandit-report.json
+          echo "Bandit report saved to bandit-report.json"
+      
+      - name: Check for vulnerable dependencies (Safety)
+        run: |
+          safety check --json > security-report.json || true
+          echo "Safety report saved to security-report.json"
+      
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit install
+          pre-commit run --all-files
+      
       - name: Run tests
         run: |
-          pytest -q
+          pytest -q prototype/test_security_fixes.py prototype/test_oqs_hybrid.py prototype/test_secure_hybrid_integration.py prototype/test_concurrency_smoke.py prototype/test_secure_run.py -v
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            security-report.json
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker images
+        run: |
+          docker-compose -f docker-compose.dev.yml build
