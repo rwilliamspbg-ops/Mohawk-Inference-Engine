@@ -24,13 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
     gcc \
     git \
-    # ONNX runtime for model inference
-    onnxruntime>=1.16.0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir "onnxruntime>=1.16.0"
 
 # Copy application code
 COPY mohawk_gui/ ./mohawk_gui/
