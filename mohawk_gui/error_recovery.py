@@ -6,7 +6,7 @@ Provides graceful degradation and automatic recovery mechanisms.
 
 import asyncio
 from typing import Optional, Callable, Dict, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -136,7 +136,7 @@ class ErrorRecoveryManager:
             await self._handle_alert(error, context, strategy.parameters)
             return None
         elif strategy.action == RecoveryAction.ABORT:
-            return await self._abort_operation(error, context)
+            return await self._abort_operation(strategy, error, context)
         else:
             return None
     
@@ -178,7 +178,7 @@ class ErrorRecoveryManager:
         # Execute in fallback mode
         return await self._execute_with_context(context, fallback_mode=fallback_mode)
     
-    async def _abort_operation(self, error: Exception, context: Dict[str, Any]):
+    async def _abort_operation(self, strategy: RecoveryStrategy, error: Exception, context: Dict[str, Any]):
         """Abort operation and rollback if needed."""
         params = strategy.parameters
         

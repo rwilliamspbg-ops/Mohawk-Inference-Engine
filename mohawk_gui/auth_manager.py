@@ -163,7 +163,9 @@ class AuthManager:
                 return None
                 
             # Check if within refresh window
-            exp_delta = verification["exp"] - datetime.now(timezone.utc)
+            # Convert Unix timestamp (int) to datetime for proper comparison
+            exp_datetime = datetime.fromtimestamp(verification["exp"], tz=timezone.utc)
+            exp_delta = exp_datetime - datetime.now(timezone.utc)
             min_refresh_seconds = timedelta(hours=self.refresh_window_hours).total_seconds()
             
             if exp_delta.total_seconds() < min_refresh_seconds:
@@ -174,7 +176,9 @@ class AuthManager:
                 user_id=verification["user_id"],
                 roles=verification.get("roles", [])
             )
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.error(f"Token refresh failed: {e}")
             return None
 
 

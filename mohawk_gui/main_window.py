@@ -76,18 +76,18 @@ class MohawkGUI(QMainWindow):
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget, stretch=1)
         
-        # Create view pages
-        dashboard_page = DashboardPage(self)
-        sessions_page = SessionsPage(self)
-        workers_page = WorkersPage(self)
-        config_page = ConfigPage(self)
-        logs_page = LogsPage(self)
+        # Create view pages - STORE AS INSTANCE ATTRIBUTES
+        self.dashboard_page = DashboardPage(self)
+        self.sessions_page = SessionsPage(self)
+        self.workers_page = WorkersPage(self)
+        self.config_page = ConfigPage(self)
+        self.logs_page = LogsPage(self)
         
-        self.stacked_widget.addWidget(dashboard_page)
-        self.stacked_widget.addWidget(sessions_page)
-        self.stacked_widget.addWidget(workers_page)
-        self.stacked_widget.addWidget(config_page)
-        self.stacked_widget.addWidget(logs_page)
+        self.stacked_widget.addWidget(self.dashboard_page)
+        self.stacked_widget.addWidget(self.sessions_page)
+        self.stacked_widget.addWidget(self.workers_page)
+        self.stacked_widget.addWidget(self.config_page)
+        self.stacked_widget.addWidget(self.logs_page)
         
         # Navigation bar at bottom
         nav_layout = QHBoxLayout()
@@ -113,10 +113,42 @@ class MohawkGUI(QMainWindow):
     
     def _show_page(self, page_name: str):
         """Show specified page."""
-        index = list(self.stacked_widget.widgets()).index(
-            getattr(self, f"{page_name}_page", None)
-        )
-        self.stacked_widget.setCurrentIndex(index)
+        page = getattr(self, f"{page_name}_page", None)
+        if page is None:
+            print(f"Warning: Page '{page_name}' not found")
+            return
+        
+        try:
+            widgets = list(self.stacked_widget.children())
+            # Find the page in stacked widget's children
+            page_index = None
+            for i, widget in enumerate(widgets):
+                if widget is page:
+                    page_index = i
+                    break
+            
+            if page_index is not None:
+                self.stacked_widget.setCurrentIndex(page_index)
+        except Exception as e:
+            print(f"Error: Could not show page '{page_name}': {e}")
+    
+    def _update_metrics(self):
+        """Update dashboard metrics periodically."""
+        if not self.is_connected:
+            self.update_status("Waiting for connection...")
+            return
+        
+        # Update metrics from buffers if available
+        if self.metrics_buffer:
+            summary = self.metrics_buffer.get_summary()
+            # Format status message with key metrics
+            status_msg = (
+                f"Active sessions: {summary.get('count', 0)} | "
+                f"Throughput: {summary.get('avg_throughput_rps', 0):.0f} req/s | "
+                f"Latency p50: {summary.get('avg_latency_p50_ms', 0):.1f}ms"
+            )
+            self.update_status(status_msg)
+
     
     def update_status(self, message: str):
         """Update status bar message."""

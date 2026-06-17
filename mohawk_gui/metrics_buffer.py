@@ -138,9 +138,19 @@ class MetricsBuffer:
         if not data:
             return 0
         
+        if not (0 <= percentile <= 1):
+            raise ValueError(f"Percentile must be between 0 and 1, got {percentile}")
+        
         sorted_data = sorted(data)
-        index = int(len(sorted_data) * percentile)
-        return sorted_data[min(index, len(sorted_data) - 1)]
+        
+        # Proper percentile calculation: map percentile to array index
+        # For n items, index should range from 0 to n-1
+        index = int((len(sorted_data) - 1) * percentile)
+        
+        # Explicit bounds checking
+        index = max(0, min(index, len(sorted_data) - 1))
+        
+        return sorted_data[index]
     
     def get_time_series(self, window_size: int = None) -> list:
         """
