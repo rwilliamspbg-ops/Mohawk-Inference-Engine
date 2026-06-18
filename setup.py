@@ -393,7 +393,7 @@ def create_docker_compose():
     """Create Docker Compose file for development."""
     docker_compose_path = Path("docker-compose.yml")
     
-    docker_compose_content = f"""# Mohawk Inference Engine GUI - Docker Compose
+    docker_compose_content = """# Mohawk Inference Engine GUI - Docker Compose
 # Version: 2.1.0
 
 version: '3.8'
