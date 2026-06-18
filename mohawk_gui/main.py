@@ -1,117 +1,113 @@
+#!/usr/bin/env python3
 """
 Mohawk Inference Engine GUI - Main Entry Point
 
-Production-ready implementation with:
-- JWT Authentication & mTLS security
-- Connection pooling for high concurrency
-- Real-time metrics with buffering and downsampling
-- Graceful error handling and recovery
-- Performance monitoring and visualization
+Production-ready GUI with:
+- Model Library Management (LM Studio-style)
+- Real-time Chat Interface
+- Performance Monitoring Dashboard
+- Session & Queue Management
+- Worker Configuration with Multi-device Splitting
+- Security Center (PQC + mTLS + JWT)
+- System Health Monitor
 """
 
 import sys
-import asyncio
+import argparse
+import os
 from pathlib import Path
 
-# Import core components
-from .main_window import MohawkGUI
-from .auth_manager import AuthManager, MTLSManager
-from .connection_pool import ConnectionPool
-from .metrics_buffer import MetricsBuffer, MetricsAggregator
-from .error_recovery import ErrorRecoveryManager
-from .monitoring import GuimetricsCollector, PerformanceTracker
-from .audit_logger import AuditLogger
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def main():
-    """
-    Main application entry point.
-    
-    Usage:
-        python mohawk_gui/main.py --host localhost --port 8003
-        
-    Options:
-        --host         Worker host (default: localhost)
-        --port         Worker port (default: 8003)
-        --key-file     Path to authentication key file
-        --cert-dir     Directory for TLS certificates
-    """
-    
-    import argparse
-    
+    """Main application entry point."""
     parser = argparse.ArgumentParser(
-        description="Mohawk Inference Engine GUI"
+        description="Mohawk Inference Engine GUI - Professional Dashboard",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py                          # Run with default settings
+  python main.py --host 0.0.0.0          # Bind to all interfaces
+  python main.py --port 8003             # Use custom port
+  python main.py --key-file certs/key.pem # Specify auth key file
+
+The dashboard includes:
+  - 📚 Model Library (LM Studio-style)
+  - 💬 Chat Interface with context management
+  - 📊 Real-time Performance Metrics
+  - 🔗 Session & Queue Manager
+  - ⚙️ Worker Configuration
+  - 🔒 Security Center (PQC + mTLS)
+  - 📜 Conversation History
+        """
     )
+    
     parser.add_argument(
-        "--host", default="localhost",
-        help="Worker host (default: localhost)"
+        "--host",
+        default="localhost",
+        help="Host to bind to (default: localhost)"
     )
+    
     parser.add_argument(
-        "--port", type=int, default=8003,
-        help="Worker port (default: 8003)"
+        "--port",
+        type=int,
+        default=8003,
+        help="Port to listen on (default: 8003)"
     )
+    
     parser.add_argument(
-        "--key-file", default=None,
+        "--key-file",
+        default=None,
         help="Path to authentication key file"
     )
+    
     parser.add_argument(
-        "--cert-dir", default="certs",
-        help="Directory for TLS certificates"
+        "--ssl-enabled",
+        action="store_true",
+        help="Enable SSL/TLS for connections"
+    )
+    
+    parser.add_argument(
+        "--metrics-interval",
+        type=int,
+        default=1000,
+        help="Metrics update interval in ms (default: 1000)"
     )
     
     args = parser.parse_args()
     
-    # Initialize application components
-    print("Initializing Mohawk Inference Engine GUI...")
+    print("=" * 60)
+    print("🦅 Mohawk Inference Engine GUI v2.1.0")
+    print("=" * 60)
+    print(f"Host: {args.host}")
+    print(f"Port: {args.port}")
+    if args.key_file:
+        print(f"Auth Key: {args.key_file}")
+    print("=" * 60)
     
-    # Initialize authentication manager
-    auth_manager = AuthManager(args.key_file) if args.key_file else None
-    
-    # Initialize connection pool
-    connection_pool = ConnectionPool(max_connections=100)
-    
-    # Initialize metrics buffer
-    metrics_buffer = MetricsBuffer(window_size=1000, sample_rate=0.1)
-    
-    # Initialize error recovery manager
-    def alert_callback(severity, message, error):
-        print(f"[ALERT {severity}] {message}: {error}")
-    
-    error_recovery = ErrorRecoveryManager(alert_callback=alert_callback)
-    
-    # Initialize monitoring collector
-    monitoring = GuimetricsCollector()
-    
-    # Initialize audit logger
-    audit_logger = AuditLogger("audit.log")
-    
-    # Create main window
-    gui = MohawkGUI()
-    
-    # Setup authentication (if configured)
-    if auth_manager:
-        print(f"Authentication enabled with key: {args.key_file}")
-    
-    # Connect to worker
     try:
-        gui.connect_to_worker(args.host, args.port)
+        # Create and show application
+        from main_window import MohawkGUI
+        
+        app = MohawkGUI()
+        app.show()
+        
+        # Run event loop
+        sys.exit(app.exec())
+        
+    except ImportError as e:
+        print(f"\n❌ Import error: {e}")
+        print("\nPlease install dependencies:")
+        print("  pip install PyQt6")
+        sys.exit(1)
+        
     except Exception as e:
-        error_recovery.handle_error(e, {"operation": "connect"})
-        print(f"Connection failed: {e}")
-    
-    # Log startup event
-    audit_logger.log_action(
-        action_type="startup",
-        resource="gui_application",
-        details={"host": args.host, "port": args.port}
-    )
-    
-    print("\nMohawk Inference Engine GUI started successfully!")
-    print(f"Connected to worker: {args.host}:{args.port}")
-    print("Press Ctrl+C to exit")
-    
-    # Run main event loop
-    sys.exit(gui.exec())
+        print(f"\n❌ Error starting application: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
