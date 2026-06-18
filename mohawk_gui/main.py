@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Mohawk Inference Engine GUI - Main Entry Point
 
@@ -34,13 +35,13 @@ Examples:
   python main.py --key-file certs/key.pem # Specify auth key file
 
 The dashboard includes:
-  - 📚 Model Library (LM Studio-style)
-  - 💬 Chat Interface with context management
-  - 📊 Real-time Performance Metrics
-  - 🔗 Session & Queue Manager
-  - ⚙️ Worker Configuration
-  - 🔒 Security Center (PQC + mTLS)
-  - 📜 Conversation History
+  - Model Library (LM Studio-style)
+  - Chat Interface with context management
+  - Real-time Performance Metrics
+  - Session & Queue Manager
+  - Worker Configuration
+  - Security Center (PQC + mTLS)
+  - Conversation History
         """
     )
     
@@ -79,7 +80,7 @@ The dashboard includes:
     args = parser.parse_args()
     
     print("=" * 60)
-    print("🦅 Mohawk Inference Engine GUI v2.1.0")
+    print("[MOHAWK] Inference Engine GUI v2.1.0")
     print("=" * 60)
     print(f"Host: {args.host}")
     print(f"Port: {args.port}")
@@ -88,23 +89,29 @@ The dashboard includes:
     print("=" * 60)
     
     try:
-        # Create and show application
+        # CRITICAL: Create QApplication FIRST before any QWidgets
+        from PyQt6.QtWidgets import QApplication
+        app = QApplication(sys.argv)
+        
+        # NOW create and show the main window
         from main_window import MohawkGUI
         
-        app = MohawkGUI()
-        app.show()
+        window = MohawkGUI()
+        window.show()
+        print("\n[INFO] GUI window opened successfully")
+        print("[INFO] Connecting to Docker backend services...")
         
         # Run event loop
         sys.exit(app.exec())
         
     except ImportError as e:
-        print(f"\n❌ Import error: {e}")
+        print(f"\n[ERROR] Import error: {e}")
         print("\nPlease install dependencies:")
         print("  pip install PyQt6")
         sys.exit(1)
         
     except Exception as e:
-        print(f"\n❌ Error starting application: {e}")
+        print(f"\n[ERROR] Error starting application: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

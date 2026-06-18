@@ -1,7 +1,7 @@
 # Mohawk Inference Engine GUI - Production Docker Image
 # Version: 2.1.0
 
-FROM python:3.12-slim
+FROM python:3.12-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -9,8 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y     gcc     git     libgl1-mesa-glx     libglib2.0-0     libxkbcommon-x11-0     libdbus-1-3     && rm -rf /var/lib/apt/lists/*
+# Install system dependencies (bookworm includes Mesa libraries natively)
+RUN apt-get update && apt-get install -y     gcc     git     libgl1     libegl1     libxkbcommon-x11-0     libdbus-1-3     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
