@@ -41,6 +41,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web-gui = [
+    "gradio>=4.0.0",
+    "plotly>=5.18.0",
+    "psutil>=5.9.0",
+    "websockets>=12.0",
+]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -53,9 +59,10 @@ dev = [
 
 [project.scripts]
 mohawk-gui = "mohawk_gui.main:main"
+mohawk-web-gui = "mohawk.gui.app:main"
 
 [tool.setuptools.packages.find]
-include = ["mohawk_gui*"]
+include = ["mohawk_gui*", "mohawk*"]
 
 [tool.setuptools.package-data]
 mohawk_gui = ["resources/**/*", "*.toml", "*.conf"]
