@@ -87,7 +87,7 @@ class ModelLoader:
         model_id = alias or path.name
         return self.add_to_library(model_id=model_id, local_path=str(path), source="local")
 
-    def list_library(self) -> list:
+    def list_library(self) -> list[Dict[str, Any]]:
         """List registered models in the local model library."""
         return list(self._library.values())
     
@@ -124,7 +124,7 @@ class ModelLoader:
         self,
         model_path: str,
         model_format: Optional[ModelFormat] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """
         Load a model and return model objects.
@@ -157,7 +157,7 @@ class ModelLoader:
         else:
             raise ValueError(f"Unsupported model format: {model_format}")
     
-    def _load_gguf(self, model_path: str, **kwargs) -> Dict[str, Any]:
+    def _load_gguf(self, model_path: str, **kwargs: Any) -> Dict[str, Any]:
         """Load GGUF format model using llama-cpp-python"""
         try:
             from llama_cpp import Llama
@@ -173,7 +173,7 @@ class ModelLoader:
         
         return {"model": llm, "tokenizer": None, "format": "gguf"}
     
-    def _load_huggingface(self, model_path: str, **kwargs) -> Dict[str, Any]:
+    def _load_huggingface(self, model_path: str, **kwargs: Any) -> Dict[str, Any]:
         """Load HuggingFace transformers model"""
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -196,7 +196,7 @@ class ModelLoader:
         
         return {"model": model, "tokenizer": tokenizer, "format": "huggingface"}
     
-    def _load_onnx(self, model_path: str, **kwargs) -> Dict[str, Any]:
+    def _load_onnx(self, model_path: str, **kwargs: Any) -> Dict[str, Any]:
         """Load ONNX model"""
         try:
             import onnxruntime as ort
@@ -207,12 +207,12 @@ class ModelLoader:
         
         return {"model": session, "tokenizer": None, "format": "onnx"}
     
-    def _load_safetensors(self, model_path: str, **kwargs) -> Dict[str, Any]:
+    def _load_safetensors(self, model_path: str, **kwargs: Any) -> Dict[str, Any]:
         """Load safetensors format model"""
         # Safetensors is typically used with transformers
         return self._load_huggingface(model_path, **kwargs)
     
-    def download(self, model_id: str, **kwargs) -> str:
+    def download(self, model_id: str, **kwargs: Any) -> str:
         """
         Download a model from HuggingFace Hub.
         
@@ -246,7 +246,7 @@ class ModelLoader:
         
         return local_path
     
-    def list_cached_models(self) -> list:
+    def list_cached_models(self) -> list[str]:
         """List all cached models"""
         return [str(p) for p in self.cache_dir.iterdir() if p.is_dir()]
     

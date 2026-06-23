@@ -38,6 +38,9 @@ def test_models_load_and_download_flow(client):
     assert load.status_code == 200
     assert load.json()["model"] == "org/new-model"
 
+    bad_download = client.post("/api/models/download", json={"model_id": "   "})
+    assert bad_download.status_code == 400
+
 
 def test_workers_add_and_connect(client):
     add = client.post("/api/workers/add", json={"host": "localhost", "port": 9000})
@@ -48,6 +51,9 @@ def test_workers_add_and_connect(client):
     assert workers.status_code == 200
     workers_data = workers.json()["workers"]
     assert any(w["host"] == "localhost" and w["port"] == 9000 for w in workers_data)
+
+    duplicate = client.post("/api/workers/add", json={"host": "localhost", "port": 9000})
+    assert duplicate.status_code == 409
 
     connect = client.post("/api/workers/connect")
     assert connect.status_code == 200
@@ -71,6 +77,18 @@ def test_chat_queue_sessions_and_security_endpoints(client):
     )
     assert chat.status_code == 200
     assert "response" in chat.json()
+
+    empty_chat = client.post(
+        "/api/inference/chat",
+        json={
+            "message": "   ",
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_tokens": 256,
+            "system_prompt": "test",
+        },
+    )
+    assert empty_chat.status_code == 400
 
     sessions = client.get("/api/sessions")
     assert sessions.status_code == 200

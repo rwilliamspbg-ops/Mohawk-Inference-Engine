@@ -172,6 +172,15 @@ class MohawkGUI(QMainWindow):
                 except:
                     return {"status": "ok", "code": response.status_code}
             else:
+                detail = None
+                try:
+                    payload = response.json()
+                    detail = payload.get("detail") or payload.get("error")
+                except Exception:
+                    detail = response.text.strip() or None
+
+                if detail:
+                    return {"error": f"HTTP {response.status_code}: {detail}"}
                 return {"error": f"HTTP {response.status_code}"}
         
         except requests.ConnectionError:
