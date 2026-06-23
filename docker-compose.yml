@@ -30,8 +30,8 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - QT_QPA_PLATFORM=offscreen
-    # Lightweight API backend used by the desktop GUI for local verification.
-    command: python -m uvicorn mohawk_gui.mock_backend:app --host 0.0.0.0 --port 8003
+    # Real controller API backend used by the desktop GUI.
+    command: python -m uvicorn prototype.controller_service:app --host 0.0.0.0 --port 8003
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
       interval: 30s

@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y     gcc     git     libgl1     libegl1 
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir "fastapi>=0.104.0" "uvicorn>=0.24.0" "requests>=2.31.0"
 
 # Copy application code
 COPY mohawk_gui/ ./mohawk_gui/
+COPY prototype/ ./prototype/
 
 # Create non-root user for security
 RUN groupadd mohawk && useradd -r -g mohawk mohawk

@@ -86,3 +86,57 @@ jobs:
       - name: Build Docker images
         run: |
           docker compose -f docker-compose.dev.yml build
+
+  compose-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start compose stack
+        run: |
+          docker compose -f docker-compose.yml up -d --build
+
+      - name: Wait for services
+        run: |
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          urls = [
+              "http://127.0.0.1:8003/health",
+              "http://127.0.0.1:8004/health",
+              "http://127.0.0.1:8003/api/workers",
+              "http://127.0.0.1:8003/api/metrics",
+          ]
+
+          deadline = time.time() + 180
+          while time.time() < deadline:
+              try:
+                  for url in urls:
+                      with urllib.request.urlopen(url, timeout=5) as response:
+                          if response.status != 200:
+                              raise RuntimeError(f"{url} returned {response.status}")
+                  break
+              except Exception:
+                  time.sleep(5)
+          else:
+              raise SystemExit("compose services did not become healthy in time")
+          PY
+
+      - name: Verify GUI-facing endpoints
+        run: |
+          curl -fsS http://127.0.0.1:8003/health
+          curl -fsS http://127.0.0.1:8003/api/workers
+          curl -fsS http://127.0.0.1:8003/api/metrics
+          curl -fsS http://127.0.0.1:8004/health
+
+      - name: Dump compose logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml logs --no-color
+
+      - name: Tear down compose stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v

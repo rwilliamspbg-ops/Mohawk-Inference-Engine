@@ -43,5 +43,5 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:9000/health || exit 1
 
-# Run controller (in production, would use proper entrypoint)
-CMD ["python", "-c", "from prototype.controller import Controller; print('Controller ready')"]
+# Run a lightweight controller API used for local compose verification.
+CMD ["python", "-m", "uvicorn", "prototype.controller_service:app", "--host", "0.0.0.0", "--port", "8000"]
