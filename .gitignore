@@ -1,4 +1,3 @@
-```
 # Python
 __pycache__/
 *.py[cod]
@@ -25,59 +24,48 @@ wheels/
 venv/
 ENV/
 env/
-.venv/
-env.bak/
-venv.bak/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.coverage.*
-.noserc
-.testing_data
+.venv
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
+*~
+.project
+.pydevproject
+.settings/
 
-# Logs
-*.log
-
-# Environment variables
-.env
-.env.local
-*.env.*
-
-# Coverage
-coverage/
+# Testing
+.pytest_cache/
+.coverage
 htmlcov/
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
+.tox/
+.nox/
+.coverage.*
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# System
+# Environment
+.env
+.venv
+env/
+ENV/
+
+# OS files
 .DS_Store
 Thumbs.db
-```
+*.log
+
+# Mohawk-specific
+__pycache__/
+*.pkl
+*.pickle
+*.pt
+*.pth
+
+# Docker volumes (if any)
+.docker-volume/
+
+# Local configuration
+.local/
+.cache/

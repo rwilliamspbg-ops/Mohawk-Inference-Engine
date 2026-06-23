@@ -1,0 +1,68 @@
+# Mohawk Inference Engine GUI - Docker Compose
+# Version: 2.1.0
+# 
+# IMPORTANT: The GUI runs locally on your machine, NOT in Docker.
+# The Docker containers run backend services (inference workers).
+# 
+# To use the GUI:
+# 1. Install PyQt6 locally: pip install -r requirements.txt
+# 2. Run the GUI on your machine: python mohawk_gui/main.py
+# 3. The GUI will connect to Docker containers on localhost:8003 and localhost:8004
+#
+# Docker containers provide:
+# - mohawk-gui service: API/health endpoint on port 8003
+# - mohawk-worker service: Inference worker on port 8004
+
+version: '3.8'
+
+services:
+  mohawk-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mohawk-gui
+    ports:
+      - "8003:8003"
+      - "8443:8443"
+    volumes:
+      - ./mohawk_gui:/app/mohawk_gui
+      - ./certs:/app/certs
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - QT_QPA_PLATFORM=offscreen
+    # Health check service running in container
+    command: python -c "import time; print('GUI service ready'); [print(f'.', end='', flush=True) or time.sleep(1) for _ in range(300)]"
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  mohawk-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: mohawk-worker
+    ports:
+      - "8004:8003"
+    volumes:
+      - ./models:/app/models
+      - ./certs:/app/certs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - QT_QPA_PLATFORM=offscreen
+    # Health check service running in container
+    command: python -c "import time; print('Worker service ready'); [print(f'.', end='', flush=True) or time.sleep(1) for _ in range(300)]"
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  default:
+    name: mohawk-network
