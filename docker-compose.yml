@@ -13,8 +13,6 @@
 # - mohawk-gui service: API/health endpoint on port 8003
 # - mohawk-worker service: Inference worker on port 8004
 
-version: '3.8'
-
 services:
   mohawk-gui:
     build:
@@ -32,10 +30,10 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - QT_QPA_PLATFORM=offscreen
-    # Health check service running in container
-    command: python -c "import time; print('GUI service ready'); [print(f'.', end='', flush=True) or time.sleep(1) for _ in range(300)]"
+    # Lightweight API backend used by the desktop GUI for local verification.
+    command: python -m uvicorn mohawk_gui.mock_backend:app --host 0.0.0.0 --port 8003
     healthcheck:
-      test: ["CMD", "python", "-c", "print('healthy')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,10 +52,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - QT_QPA_PLATFORM=offscreen
-    # Health check service running in container
-    command: python -c "import time; print('Worker service ready'); [print(f'.', end='', flush=True) or time.sleep(1) for _ in range(300)]"
+    command: python prototype/worker.py --host 0.0.0.0 --port 8003
     healthcheck:
-      test: ["CMD", "python", "-c", "print('healthy')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
       interval: 30s
       timeout: 10s
       retries: 3

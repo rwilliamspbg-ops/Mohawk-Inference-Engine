@@ -4,6 +4,8 @@ Uses numpy.tobytes() for weights and protobuf-like manifest format.
 """
 
 import time
+import struct
+import io
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -26,31 +28,68 @@ class WeightSlice:
 
     def to_bytes(self) -> bytes:
         """Serialize weights to binary format (no pickle)."""
-        # Pack all weight and bias arrays into a single binary blob
-        packed = []
-        for w, b in self.weights:
-            packed.append(w.tobytes())
-            packed.append(b.tobytes())
-        return b"\x00".join(packed)
+        # Store exact arrays/shapes in an NPZ container (allow_pickle=False).
+        arrays = {}
+        for i, (w, b) in enumerate(self.weights):
+            arrays[f"w_{i}"] = w
+            arrays[f"b_{i}"] = b
+
+        buf = io.BytesIO()
+        np.savez_compressed(buf, **arrays)
+        return buf.getvalue()
 
     @classmethod
     def from_bytes(
         cls, data: bytes, start: int, end: int, version: str = "v1.0"
     ) -> "WeightSlice":
         """Deserialize weights from binary format."""
-        # Split by null bytes and reconstruct arrays
+        # Preferred format: NPZ archive with explicit arrays.
+        try:
+            with np.load(io.BytesIO(data), allow_pickle=False) as archive:
+                layer_indices = sorted(
+                    {
+                        int(key.split("_")[1])
+                        for key in archive.files
+                        if key.startswith("w_")
+                    }
+                )
+                weights = []
+                for idx in layer_indices:
+                    w = archive[f"w_{idx}"]
+                    b = archive[f"b_{idx}"]
+                    weights.append((w.astype(np.float32), b.astype(np.float32)))
+                if weights:
+                    return cls(start, end, tuple(weights), version)
+        except Exception:
+            pass
+
         weight_data = []
+
+        # Preferred format: length-prefixed chunks.
         idx = 0
-        while idx < len(data):
-            if data[idx : idx + 1] == b"\x00":
-                idx += 1
-            else:
-                # Find end of this array (next null byte)
-                end_idx = data.find(b"\x00", idx)
-                if end_idx == -1:
-                    end_idx = len(data)
-                weight_data.append(data[idx:end_idx])
-                idx = end_idx + 1
+        try:
+            while idx + 4 <= len(data):
+                chunk_len = struct.unpack("!I", data[idx : idx + 4])[0]
+                idx += 4
+                if idx + chunk_len > len(data):
+                    raise ValueError("invalid chunk length in WeightSlice payload")
+                weight_data.append(data[idx : idx + chunk_len])
+                idx += chunk_len
+            if idx != len(data):
+                raise ValueError("trailing bytes in WeightSlice payload")
+        except Exception:
+            # Backward compatibility for older null-delimited payloads.
+            weight_data = []
+            idx = 0
+            while idx < len(data):
+                if data[idx : idx + 1] == b"\x00":
+                    idx += 1
+                else:
+                    end_idx = data.find(b"\x00", idx)
+                    if end_idx == -1:
+                        end_idx = len(data)
+                    weight_data.append(data[idx:end_idx])
+                    idx = end_idx + 1
 
         # Reconstruct arrays from bytes
         weights = []
@@ -89,6 +128,14 @@ class WeightSlice:
             shapes[f"layer_{self.start_layer}_{i}_weight"] = w.shape
             shapes[f"layer_{self.start_layer}_{i}_bias"] = b.shape if len(b) > 0 else ()
         return shapes
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        """Apply this slice's layers to input activations."""
+        out = x
+        for w, b in self.weights:
+            out = w @ out + b[:, None]
+            out = np.tanh(out)
+        return out
 
     def __repr__(self):
         return (

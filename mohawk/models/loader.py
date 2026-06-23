@@ -9,6 +9,7 @@ Supports:
 
 import os
 import logging
+import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 from enum import Enum
@@ -44,7 +45,51 @@ class ModelLoader:
         """
         self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".mohawk" / "models"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.library_file = self.cache_dir / "library.json"
+        self._library = self._load_library_index()
         logger.info(f"ModelLoader initialized with cache_dir={self.cache_dir}")
+
+    def _load_library_index(self) -> Dict[str, Dict[str, Any]]:
+        """Load persisted model library metadata."""
+        if not self.library_file.exists():
+            return {}
+
+        try:
+            with self.library_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            logger.warning("Failed to read model library index; starting fresh")
+            return {}
+
+    def _save_library_index(self) -> None:
+        """Persist model library metadata to disk."""
+        with self.library_file.open("w", encoding="utf-8") as f:
+            json.dump(self._library, f, indent=2, sort_keys=True)
+
+    def add_to_library(self, model_id: str, local_path: str, source: str) -> Dict[str, Any]:
+        """Register a model in the local model library index."""
+        entry = {
+            "model_id": model_id,
+            "local_path": str(local_path),
+            "source": source,
+        }
+        self._library[model_id] = entry
+        self._save_library_index()
+        return entry
+
+    def add_local_model(self, model_path: str, alias: Optional[str] = None) -> Dict[str, Any]:
+        """Add an existing local model directory or file to the model library."""
+        path = Path(model_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Local model path not found: {model_path}")
+
+        model_id = alias or path.name
+        return self.add_to_library(model_id=model_id, local_path=str(path), source="local")
+
+    def list_library(self) -> list:
+        """List registered models in the local model library."""
+        return list(self._library.values())
     
     def detect_format(self, model_path: str) -> ModelFormat:
         """
@@ -134,13 +179,19 @@ class ModelLoader:
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError:
             raise ImportError("transformers required for HuggingFace models. Install with: pip install transformers")
-        
-        tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
+
+        tokenizer_kwargs = dict(kwargs.pop("tokenizer_kwargs", {}))
+        tokenizer_kwargs.setdefault("local_files_only", kwargs.get("local_files_only", False))
+
+        model_kwargs = dict(kwargs.pop("model_kwargs", {}))
+        model_kwargs.setdefault("torch_dtype", kwargs.pop("torch_dtype", "auto"))
+        model_kwargs.setdefault("device_map", kwargs.pop("device_map", "auto"))
+        model_kwargs.update(kwargs)
+
+        tokenizer = AutoTokenizer.from_pretrained(model_path, **tokenizer_kwargs)
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=kwargs.get("torch_dtype", "auto"),
-            device_map=kwargs.get("device_map", "auto"),
-            **kwargs,
+            **model_kwargs,
         )
         
         return {"model": model, "tokenizer": tokenizer, "format": "huggingface"}
@@ -172,17 +223,26 @@ class ModelLoader:
         Returns:
             Local path to downloaded model
         """
+        if not model_id or not model_id.strip():
+            raise ValueError("model_id must be a non-empty HuggingFace repository ID")
+
         from huggingface_hub import snapshot_download
         
-        cache_path = self.cache_dir / model_id.replace("/", "_")
+        model_id = model_id.strip()
+        cache_path = self.cache_dir / model_id.replace("/", "--")
         
         logger.info(f"Downloading {model_id} to {cache_path}")
+
+        download_kwargs = dict(kwargs)
+        download_kwargs.setdefault("local_dir", str(cache_path))
+        download_kwargs.setdefault("local_dir_use_symlinks", False)
         
         local_path = snapshot_download(
             repo_id=model_id,
-            local_dir=str(cache_path),
-            **kwargs,
+            **download_kwargs,
         )
+
+        self.add_to_library(model_id=model_id, local_path=local_path, source="huggingface")
         
         return local_path
     
