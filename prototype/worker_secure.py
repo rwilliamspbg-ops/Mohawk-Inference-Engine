@@ -5,6 +5,7 @@ import threading
 import traceback
 from typing import Dict
 
+import numpy as np
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -48,6 +49,7 @@ class PreloadRequest(BaseModel):
 class ExecRequest(BaseModel):
     slice_id: str
     input_b64: str
+    manifest: dict | None = None
     encrypted: bool = False
     nonce_b64: str = None
 
@@ -205,7 +207,8 @@ async def execute(req: ExecRequest):
 
     try:
         if req.encrypted:
-            client_id = req.manifest.get("client_id") or "controller"
+            manifest = req.manifest or {}
+            client_id = manifest.get("client_id") or "controller"
             aead = keys.get(client_id) if client_id else keys.get("controller")
 
             if not aead:
@@ -220,17 +223,21 @@ async def execute(req: ExecRequest):
             blob = base64.b64decode(req.input_b64)
 
         # Deserialize input
-        x = np.frombuffer(blob, dtype=np.float32) if "np" in dir() else blob
+        try:
+            x = pickle.loads(blob)
+        except Exception:
+            x = np.frombuffer(blob, dtype=np.float32)
 
         # Forward pass
         out = slices[req.slice_id].apply(x)
 
         # Serialize output safely (no pickle)
-        out_bytes = out.tobytes() if hasattr(out, "tobytes") else str(out).encode()
+        out_bytes = pickle.dumps(out)
 
         # Encrypt response if request was encrypted
         if req.encrypted:
-            client_id = req.manifest.get("client_id") or "controller"
+            manifest = req.manifest or {}
+            client_id = manifest.get("client_id") or "controller"
             aead = keys.get(client_id) if client_id else keys.get("controller")
 
             nonce, ct = aead.encrypt(out_bytes)

@@ -187,7 +187,8 @@ class MetricsAggregator:
     def get_or_create_buffer(self, session_id: str) -> MetricsBuffer:
         """Get existing buffer or create new one for session."""
         if session_id not in self.session_buffers:
-            self.session_buffers[session_id] = MetricsBuffer()
+            # Aggregation should be deterministic across sessions; avoid sampling loss.
+            self.session_buffers[session_id] = MetricsBuffer(sample_rate=1.0)
         return self.session_buffers[session_id]
     
     async def add_metrics(self, session_id: str, metrics: Dict[str, Any]):

@@ -167,7 +167,7 @@ class PQCAdapter:
         hkdf = HKDF(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=os.urandom(32),  # Explicit random salt
+            salt=None,
             info=b"mohawk-v1-aead-key",  # Versioned info string
         )
         key = hkdf.derive(shared)
@@ -221,7 +221,7 @@ def derive_hybrid_key(shared_x25519: bytes, shared_oqs: bytes) -> bytes:
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=os.urandom(32),  # Explicit random salt
+        salt=None,
         info=b"mohawk-v1-hybrid-aead-key",  # Versioned info string
     )
     return hkdf.derive(combined)
