@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QSpinBox, QDoubleSpinBox, QProgressBar, QHeaderView, QScrollArea,
     QGridLayout, QFormLayout, QCheckBox
 )
+from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QColor
 
@@ -171,6 +172,15 @@ class MohawkGUI(QMainWindow):
                 except:
                     return {"status": "ok", "code": response.status_code}
             else:
+                detail = None
+                try:
+                    payload = response.json()
+                    detail = payload.get("detail") or payload.get("error")
+                except Exception:
+                    detail = response.text.strip() or None
+
+                if detail:
+                    return {"error": f"HTTP {response.status_code}: {detail}"}
                 return {"error": f"HTTP {response.status_code}"}
         
         except requests.ConnectionError:
@@ -231,22 +241,34 @@ class MohawkGUI(QMainWindow):
         return widget
     
     def refresh_models(self):
-        """Refresh model list from API or use defaults."""
-        models = [
-            ("Llama-3-8B-Instruct-Q4_K_M", 7.2, "LLM", "Q4_K_M", "Ready"),
-            ("Mistral-7B-v0.3-Q5_K_M", 6.1, "LLM", "Q5_K_M", "Ready"),
-            ("CodeLlama-13B-Instruct-Q3_K_M", 9.8, "LLM", "Q3_K_M", "Ready"),
-        ]
-        
+        """Refresh model list from controller API."""
+        result = self.api_call("/api/models")
+        if "error" in result:
+            self.status_bar.showMessage(f"Model refresh failed: {result['error']}")
+            self.models_table.setRowCount(0)
+            return
+
+        models = result.get("models", [])
+        current_model = result.get("current_model")
+        if current_model:
+            self.selected_model_label.setText(current_model)
+
         self.models_table.setRowCount(len(models))
-        for i, (name, size, mtype, quant, status) in enumerate(models):
+        for i, model in enumerate(models):
+            name = model.get("name", "Unknown")
+            size = model.get("size_gb", 0)
+            mtype = model.get("type", "LLM")
+            quant = model.get("quantization", "Unknown")
+            status = model.get("status", "Unknown")
+
             self.models_table.setItem(i, 0, QTableWidgetItem(name))
             self.models_table.setItem(i, 1, QTableWidgetItem(str(size)))
             self.models_table.setItem(i, 2, QTableWidgetItem(mtype))
             self.models_table.setItem(i, 3, QTableWidgetItem(quant))
             
             status_item = QTableWidgetItem(status)
-            status_item.setForeground(QColor("green"))
+            status_color = "green" if status in {"Ready", "Loaded"} else "orange"
+            status_item.setForeground(QColor(status_color))
             self.models_table.setItem(i, 4, status_item)
             
             load_btn = QPushButton("Load")
@@ -266,7 +288,26 @@ class MohawkGUI(QMainWindow):
     
     def download_model(self):
         """Download a model."""
-        QMessageBox.information(self, "Download", "Model download started from HuggingFace Hub")
+        model_id, accepted = QInputDialog.getText(
+            self,
+            "Download Model",
+            "Enter HuggingFace model ID:",
+        )
+        if not accepted:
+            return
+
+        model_id = model_id.strip()
+        if not model_id:
+            QMessageBox.warning(self, "Download Error", "Model ID cannot be empty")
+            return
+
+        result = self.api_call("/api/models/download", "POST", {"model_id": model_id})
+        if "error" in result:
+            QMessageBox.warning(self, "Download Error", result["error"])
+            return
+
+        self.refresh_models()
+        QMessageBox.information(self, "Download", f"Model available: {model_id}")
     
     def create_chat_interface_tab(self):
         """Create chat interface tab."""
@@ -488,14 +529,11 @@ class MohawkGUI(QMainWindow):
     def refresh_sessions(self):
         """Refresh sessions from API."""
         result = self.api_call("/api/sessions")
-        
-        if "error" not in result:
-            sessions = result.get("sessions", [])
+        if "error" in result:
+            self.status_bar.showMessage(f"Session refresh failed: {result['error']}")
+            sessions = []
         else:
-            sessions = [
-                {"id": "sess_001", "model": "Llama-3-8B", "status": "Running", "throughput": 1250, "latency": 12, "tokens": 450},
-                {"id": "sess_002", "model": "Mistral-7B", "status": "Running", "throughput": 980, "latency": 15, "tokens": 350},
-            ]
+            sessions = result.get("sessions", [])
         
         self.sessions_table.setRowCount(len(sessions))
         for i, session in enumerate(sessions):
@@ -535,10 +573,14 @@ class MohawkGUI(QMainWindow):
     def cancel_session(self, session_idx):
         """Cancel a session."""
         reply = QMessageBox.question(self, "Cancel Session", "Are you sure?")
-        if reply:
+        if reply == QMessageBox.StandardButton.Yes:
             session_id = self.sessions_table.item(session_idx, 0).text()
             result = self.api_call(f"/api/sessions/{session_id}/cancel", "POST")
+            if "error" in result:
+                QMessageBox.warning(self, "Cancel Error", result["error"])
+                return
             QMessageBox.information(self, "Cancelled", "Session cancelled")
+            self.refresh_sessions()
     
     def create_workers_tab(self):
         """Create workers configuration tab."""
@@ -548,14 +590,15 @@ class MohawkGUI(QMainWindow):
         # Add worker controls
         add_layout = QHBoxLayout()
         add_layout.addWidget(QLabel("Host:"))
-        host_input = QLineEdit()
-        host_input.setText("localhost")
-        add_layout.addWidget(host_input)
+        self.worker_host_input = QLineEdit()
+        self.worker_host_input.setText("localhost")
+        add_layout.addWidget(self.worker_host_input)
         
         add_layout.addWidget(QLabel("Port:"))
-        port_spin = QSpinBox()
-        port_spin.setValue(8005)
-        add_layout.addWidget(port_spin)
+        self.worker_port_spin = QSpinBox()
+        self.worker_port_spin.setValue(8005)
+        self.worker_port_spin.setRange(1, 65535)
+        add_layout.addWidget(self.worker_port_spin)
         
         add_btn = QPushButton("Add Worker")
         add_btn.clicked.connect(self.add_worker)
@@ -582,14 +625,14 @@ class MohawkGUI(QMainWindow):
     def refresh_workers(self):
         """Refresh workers from API."""
         result = self.api_call("/api/workers")
-        
-        if "error" not in result:
-            workers = result.get("workers", [])
+        if "error" in result:
+            self.status_bar.showMessage(f"Worker refresh failed: {result['error']}")
+            workers = []
         else:
-            workers = [
-                {"id": "worker_0", "host": "localhost", "port": 8003, "status": "Connected", "model": "Llama-3-8B", "threads": 8, "load": 25},
-                {"id": "worker_1", "host": "localhost", "port": 8004, "status": "Connected", "model": "Mistral-7B", "threads": 8, "load": 18},
-            ]
+            workers = result.get("workers", [])
+
+        connected = sum(1 for w in workers if w.get("status") == "Connected")
+        self.worker_count_label.setText(f"Workers: {connected}/{len(workers)}")
         
         self.workers_table.setRowCount(len(workers))
         for i, worker in enumerate(workers):
@@ -599,7 +642,7 @@ class MohawkGUI(QMainWindow):
             
             status = worker.get("status", "Unknown")
             status_item = QTableWidgetItem(status)
-            status_color = "green" if status == "Connected" else "red"
+            status_color = "green" if status == "Connected" else "orange"
             status_item.setForeground(QColor(status_color))
             self.workers_table.setItem(i, 2, status_item)
             
@@ -611,12 +654,26 @@ class MohawkGUI(QMainWindow):
             load_bar.setValue(load)
             self.workers_table.setCellWidget(i, 5, load_bar)
             
-            action_btn = QPushButton("Disconnect" if status == "Connected" else "Connect")
+            action_btn = QPushButton("Connected" if status == "Connected" else "Unavailable")
+            action_btn.setEnabled(False)
             self.workers_table.setCellWidget(i, 6, action_btn)
     
     def add_worker(self):
         """Add a new worker."""
-        QMessageBox.information(self, "Worker Added", "New worker registered successfully")
+        host = self.worker_host_input.text().strip()
+        port = int(self.worker_port_spin.value())
+
+        if not host:
+            QMessageBox.warning(self, "Add Worker", "Host is required")
+            return
+
+        result = self.api_call("/api/workers/add", "POST", {"host": host, "port": port})
+        if "error" in result:
+            QMessageBox.warning(self, "Add Worker", result["error"])
+            return
+
+        self.refresh_workers()
+        QMessageBox.information(self, "Worker Added", f"Worker added: {host}:{port}")
     
     def create_security_tab(self):
         """Create security center tab."""
@@ -724,8 +781,11 @@ class MohawkGUI(QMainWindow):
         if "error" in result:
             QMessageBox.warning(self, "Connection Error", result["error"])
         else:
-            self.worker_count_label.setText("Workers: 2/2")
-            QMessageBox.information(self, "Workers Connected", "Successfully connected to 2 workers")
+            connected = result.get("connected", 0)
+            total = result.get("total", connected)
+            self.worker_count_label.setText(f"Workers: {connected}/{total}")
+            QMessageBox.information(self, "Workers Connected", f"Connected workers: {connected}/{total}")
+            self.refresh_workers()
     
     def periodic_update(self):
         """Periodic updates for live data."""
@@ -749,6 +809,20 @@ class MohawkGUI(QMainWindow):
             
             self.gpu_bar.setValue(metrics.get("gpu", 0))
             self.gpu_value.setText(f"{metrics.get('gpu', 0)}%")
+
+            # Update latency bars when available
+            if "latency_p50" in metrics:
+                bar, label = self.metrics_bars["latency_p50"]
+                bar.setValue(int(metrics.get("latency_p50", 0)))
+                label.setText(str(int(metrics.get("latency_p50", 0))))
+            if "latency_p95" in metrics:
+                bar, label = self.metrics_bars["latency_p95"]
+                bar.setValue(int(metrics.get("latency_p95", 0)))
+                label.setText(str(int(metrics.get("latency_p95", 0))))
+            if "latency_p99" in metrics:
+                bar, label = self.metrics_bars["latency_p99"]
+                bar.setValue(int(metrics.get("latency_p99", 0)))
+                label.setText(str(int(metrics.get("latency_p99", 0))))
     
     def refresh_all(self):
         """Refresh all tabs."""

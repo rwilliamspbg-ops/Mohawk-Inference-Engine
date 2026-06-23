@@ -77,3 +77,6 @@ markers = [
 testpaths = ["prototype", "tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]

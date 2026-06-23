@@ -4,6 +4,8 @@ Tests for the ModelLoader class
 
 import pytest
 from pathlib import Path
+from typing import Any, cast
+from _pytest.monkeypatch import MonkeyPatch
 from mohawk.models.loader import ModelLoader, ModelFormat
 
 
@@ -16,7 +18,7 @@ class TestModelLoader:
         assert loader.cache_dir.exists()
         assert "mohawk" in str(loader.cache_dir)
     
-    def test_init_with_cache_dir(self, tmp_path):
+    def test_init_with_cache_dir(self, tmp_path: Path):
         """Test loader initialization with custom cache dir"""
         loader = ModelLoader(cache_dir=str(tmp_path))
         assert loader.cache_dir == tmp_path
@@ -39,7 +41,7 @@ class TestModelLoader:
         fmt = loader.detect_format("meta-llama/Llama-2-7b")
         assert fmt == ModelFormat.HUGGINGFACE
     
-    def test_detect_format_safetensors(self, tmp_path):
+    def test_detect_format_safetensors(self, tmp_path: Path):
         """Test safetensors format detection"""
         loader = ModelLoader()
         
@@ -56,20 +58,20 @@ class TestModelLoader:
         loader = ModelLoader()
         
         # Test with an invalid format enum
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         
         # Create a mock that returns None for detect_format
         with patch.object(loader, 'detect_format', return_value=None):
             with pytest.raises((ValueError, AttributeError)):
                 loader.load("fake-model")
     
-    def test_list_cached_models_empty(self, tmp_path):
+    def test_list_cached_models_empty(self, tmp_path: Path):
         """Test listing cached models when empty"""
         loader = ModelLoader(cache_dir=str(tmp_path))
         models = loader.list_cached_models()
         assert len(models) == 0
     
-    def test_list_cached_models_with_content(self, tmp_path):
+    def test_list_cached_models_with_content(self, tmp_path: Path):
         """Test listing cached models with content"""
         loader = ModelLoader(cache_dir=str(tmp_path))
         
@@ -81,7 +83,7 @@ class TestModelLoader:
         models = loader.list_cached_models()
         assert len(models) == 2
     
-    def test_clear_cache(self, tmp_path):
+    def test_clear_cache(self, tmp_path: Path):
         """Test clearing the cache"""
         loader = ModelLoader(cache_dir=str(tmp_path))
         
@@ -94,7 +96,7 @@ class TestModelLoader:
         # Cache should be empty
         assert len(list(tmp_path.iterdir())) == 0
 
-    def test_add_local_model_registers_library_entry(self, tmp_path):
+    def test_add_local_model_registers_library_entry(self, tmp_path: Path):
         """Adding local models should persist an index entry."""
         loader = ModelLoader(cache_dir=str(tmp_path))
         local_model = tmp_path / "my_local_model"
@@ -107,13 +109,13 @@ class TestModelLoader:
         assert entry["local_path"] == str(local_model)
         assert any(item["model_id"] == "my-model" for item in loader.list_library())
 
-    def test_download_registers_huggingface_model(self, tmp_path, monkeypatch):
+    def test_download_registers_huggingface_model(self, tmp_path: Path, monkeypatch: MonkeyPatch):
         """Downloaded HF models should be added to the model library."""
         loader = ModelLoader(cache_dir=str(tmp_path))
 
         captured = {}
 
-        def fake_snapshot_download(repo_id, **kwargs):
+        def fake_snapshot_download(repo_id: str, **kwargs: Any) -> str:
             captured["repo_id"] = repo_id
             captured["kwargs"] = kwargs
             target = Path(kwargs["local_dir"])
@@ -127,10 +129,11 @@ class TestModelLoader:
 
         assert captured["repo_id"] == "org/model-a"
         assert Path(out_path).exists()
-        assert Path(captured["kwargs"]["local_dir"]).name == "org--model-a"
+        local_dir = cast(str, captured["kwargs"]["local_dir"])
+        assert Path(local_dir).name == "org--model-a"
         assert any(item["model_id"] == "org/model-a" for item in loader.list_library())
 
-    def test_download_rejects_empty_model_id(self, tmp_path):
+    def test_download_rejects_empty_model_id(self, tmp_path: Path):
         """Invalid/blank model IDs should fail early."""
         loader = ModelLoader(cache_dir=str(tmp_path))
 
