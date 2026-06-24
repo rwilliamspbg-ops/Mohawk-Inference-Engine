@@ -1,18 +1,3 @@
-# Mohawk Inference Engine GUI - Docker Compose
-# Version: 2.1.0
-# 
-# IMPORTANT: The GUI runs locally on your machine, NOT in Docker.
-# The Docker containers run backend services (inference workers).
-# 
-# To use the GUI:
-# 1. Install PyQt6 locally: pip install -r requirements.txt
-# 2. Run the GUI on your machine: python mohawk_gui/main.py
-# 3. The GUI will connect to Docker containers on localhost:8003 and localhost:8004
-#
-# Docker containers provide:
-# - mohawk-gui service: API/health endpoint on port 8003
-# - mohawk-worker service: Inference worker on port 8004
-
 services:
   mohawk-gui:
     build:
@@ -30,14 +15,18 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - QT_QPA_PLATFORM=offscreen
-    # Real controller API backend used by the desktop GUI.
-    command: python -m uvicorn prototype.controller_service:app --host 0.0.0.0 --port 8003
+      - DISCOVERY=true
+    command: >
+      python -m uvicorn prototype.gui_backend:app
+      --host 0.0.0.0 --port 8003
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
       retries: 3
     restart: unless-stopped
+    networks:
+      - mohawk-network
 
   mohawk-worker:
     build:
@@ -49,17 +38,25 @@ services:
     volumes:
       - ./models:/app/models
       - ./certs:/app/certs
+      - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
       - QT_QPA_PLATFORM=offscreen
-    command: python prototype/worker.py --host 0.0.0.0 --port 8003
+      - DISCOVERY=true
+    command: >
+      python -m uvicorn prototype.worker_secure:app
+      --host 0.0.0.0 --port 8003
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     restart: unless-stopped
+    networks:
+      - mohawk-network
 
 networks:
-  default:
+  mohawk-network:
     name: mohawk-network
+    driver: bridge
