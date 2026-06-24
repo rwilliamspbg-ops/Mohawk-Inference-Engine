@@ -1,11 +1,11 @@
-# Mohawk Inference Engine GUI - Production Requirements
-# Version: 2.1.0 (Production Ready)
+# Mohawk Inference Engine - Production Requirements
+# Version: 2.1.0 (Linux/ARM64 Optimized)
 
 # =============================================================================
 # CORE PRODUCTION DEPENDENCIES
 # =============================================================================
 
-# Core GUI Framework - PyQt6 is production-ready and cross-platform
+# Core GUI Framework - PyQt6 (Linux-compatible, build from source if needed)
 PyQt6>=6.5.0
 
 # Cryptography for JWT and mTLS security
@@ -17,60 +17,65 @@ PyJWT>=2.8.0
 # Performance monitoring (cross-platform)
 psutil>=5.9.0
 
-# WebSockets for metrics streaming
-websockets>=11.0
-
-# Data visualization - PyQtGraph is faster than Matplotlib
-pyqtgraph>=0.13.0
-
-# Configuration handling (TOML format)
-tomli>=2.0.1
-
-# Validation with Pydantic
-pydantic>=2.5.0
-
-# HTTP client for metrics streaming
-httpx>=0.24.0
-
 # Async support
 aiohttp>=3.9.0
+httpx>=0.24.0
 
 # Logging and monitoring (production-grade)
 loguru>=0.7.0
 
+# Validation with Pydantic
+pydantic>=2.5.0
+
 # =============================================================================
-# WEB GUI DEPENDENCIES (Gradio-based interface)
+# SERVICE DISCOVERY & NETWORKING (LAN auto-discovery)
 # =============================================================================
 
+# mDNS/Zeroconf service discovery for LAN auto-connect
+zeroconf>=0.132.0
+netifaces>=0.11.0
+
+# =============================================================================
+# WEB FRAMEWORK DEPENDENCIES
+# =============================================================================
+
+# FastAPI for backend services
+fastapi>=0.104.0
+uvicorn>=0.24.0
+requests>=2.31.0
+
+# WebSockets for metrics streaming
+websockets>=11.0
+
+# =============================================================================
+# DATA & VISUALIZATION (Optional, lightweight)
+# =============================================================================
+
+# Configuration handling (TOML format)
+tomli>=2.0.1
+
+# Gradio for alternative web UI (optional)
 gradio>=4.0.0
 plotly>=5.18.0
 
 # =============================================================================
-# OPTIONAL DEPENDENCIES (Auto-installed if needed)
+# OPTIONAL DEPENDENCIES
 # =============================================================================
 
 # SSL/TLS certificate handling
 certifi>=2023.0.0
 
-# Platform-specific dependencies will be auto-resolved
+# Platform-specific dependencies:
+# Linux: automatically installed by pip
+# ARM64: May need build-essential for compilation
 
 # =============================================================================
-# BUILD & PACKAGING (Development Only - Not in final EXE)
+# DEVELOPMENT ONLY (Not in production containers)
 # =============================================================================
 
-# PyInstaller for creating standalone executables
-PyInstaller>=6.0.0
-
-# Build isolation
-virtualenv>=20.24.0
-
-# =============================================================================
-# TESTING (Development Only - Not in final EXE)
-# =============================================================================
-
+# Test frameworks
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
-pytest-qt>=4.2.0
 
 # Code quality
 black>=23.12.0
@@ -81,8 +86,5 @@ mypy>=1.5.0
 bandit>=1.7.0
 safety>=2.3.0
 
-# =============================================================================
-# DOCKER & CONTAINERS (Development Only - Not in final EXE)
-# =============================================================================
-
+# Environment configuration
 python-dotenv>=1.0.0
