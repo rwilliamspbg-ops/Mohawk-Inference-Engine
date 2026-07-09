@@ -3,6 +3,7 @@ import base64
 import pickle
 import threading
 import traceback
+from datetime import datetime
 from typing import Dict
 
 import numpy as np
@@ -264,6 +265,12 @@ async def execute(req: ExecRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "mohawk-worker", "timestamp": datetime.now().isoformat()}
+
+
 @app.get("/metrics")
 async def get_metrics():
     """Expose computed percentiles based on histogram buckets."""
@@ -317,6 +324,12 @@ async def get_metrics():
             out[f"{metric_prefix}_p99"] = ps["p99"]
 
     return JSONResponse(content=out)
+
+
+@app.get("/api/workers")
+async def list_workers():
+    """Return list of loaded model slices (workers)."""
+    return {"workers": list(slices.keys()), "count": len(slices)}
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ try:
     from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 except ImportError:
     Zeroconf = None
+    ServiceStateChange = None
 
 logger = logging.getLogger(__name__)
 
