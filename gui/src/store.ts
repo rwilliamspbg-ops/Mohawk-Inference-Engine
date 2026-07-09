@@ -54,7 +54,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         id: m.id,
         name: m.name || m.id,
         description: `${m.parameters || 'Unknown'} parameters`,
-        parameters: String(m.parameters ?? 'Unknown'),
+        parameters: m.parameters?.toString() ?? 'Unknown',
         quantization: m.quantization || 'unknown',
         size: `${m.size_gb || 'Unknown'} GB`,
         status: m.loaded ? 'loaded' as const : 'unloaded' as const,
