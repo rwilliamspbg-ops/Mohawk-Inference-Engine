@@ -1,0 +1,47 @@
+# Dockerfile for Mohawk Controller
+FROM python:3.12-bookworm AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    curl \
+    git \
+    libssl-dev \
+    pkg-config \
+    && git clone --depth 1 --branch 0.15.0 https://github.com/open-quantum-safe/liboqs /tmp/liboqs \
+    && cmake -S /tmp/liboqs -B /tmp/liboqs/build \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/liboqs/build --parallel $(nproc) \
+    && cmake --install /tmp/liboqs/build \
+    && ldconfig /usr/local/lib \
+    && rm -rf /tmp/liboqs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser appuser
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY prototype/ ./prototype/
+
+# Set ownership for non-root user
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+# Expose controller port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run a lightweight controller API used for local compose verification.
+CMD ["python", "-m", "uvicorn", "prototype.controller_service:app", "--host", "0.0.0.0", "--port", "8000"]

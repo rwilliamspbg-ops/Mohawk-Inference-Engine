@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_liboqs:
+        description: Build liboqs from source before running tests
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      OQS_INSTALL_PATH: /usr/local
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libssl-dev pkg-config
+      
+      - name: Optionally build liboqs
+        if: github.event_name == 'workflow_dispatch' && inputs.build_liboqs || vars.BUILD_LIBOQS == 'true'
+        run: |
+          git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs
+          mkdir -p /tmp/liboqs/build && cd /tmp/liboqs/build
+          cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+          python -m pip install liboqs-python
+      
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r prototype/requirements.txt
+          pip install bandit safety pre-commit
+      
+      - name: Run security scan (Bandit)
+        run: |
+          bandit -r prototype/ --exit-zero -f json -o bandit-report.json
+          echo "Bandit report saved to bandit-report.json"
+      
+      - name: Check for vulnerable dependencies (Safety)
+        run: |
+          safety check --json > security-report.json || true
+          echo "Safety report saved to security-report.json"
+      
+      - name: Run repository hygiene hooks
+        run: |
+          pre-commit run check-yaml --all-files
+          pre-commit run check-json --all-files
+          pre-commit run check-added-large-files --all-files
+      
+      - name: Run tests
+        run: |
+          pytest -q prototype/test_security_fixes.py prototype/test_oqs_hybrid.py prototype/test_secure_hybrid_integration.py prototype/test_concurrency_smoke.py prototype/test_secure_run.py -v
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            security-report.json
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker images
+        run: |
+          docker compose -f docker-compose.dev.yml build
+
+  compose-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start compose stack
+        run: |
+          docker compose -f docker-compose.yml up -d --build
+
+      - name: Wait for services
+        run: |
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          urls = [
+              "http://127.0.0.1:8003/health",
+              "http://127.0.0.1:8004/health",
+              "http://127.0.0.1:8003/api/workers",
+              "http://127.0.0.1:8003/api/metrics",
+          ]
+
+          deadline = time.time() + 180
+          while time.time() < deadline:
+              try:
+                  for url in urls:
+                      with urllib.request.urlopen(url, timeout=5) as response:
+                          if response.status != 200:
+                              raise RuntimeError(f"{url} returned {response.status}")
+                  break
+              except Exception:
+                  time.sleep(5)
+          else:
+              raise SystemExit("compose services did not become healthy in time")
+          PY
+
+      - name: Verify GUI-facing endpoints
+        run: |
+          curl -fsS http://127.0.0.1:8003/health
+          curl -fsS http://127.0.0.1:8003/api/workers
+          curl -fsS http://127.0.0.1:8003/api/metrics
+          curl -fsS http://127.0.0.1:8004/health
+
+      - name: Dump compose logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml logs --no-color
+
+      - name: Tear down compose stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v

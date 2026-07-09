@@ -1,0 +1,47 @@
+services:
+  controller:
+    build:
+      context: .
+      dockerfile: Dockerfile.controller
+    ports:
+      - "8000:8000"
+    environment:
+      - WORKER_URLS=http://worker1:8000,http://worker2:8000
+    command: python -m uvicorn prototype.controller_service:app --host 0.0.0.0 --port 8000
+    depends_on:
+      - worker1
+      - worker2
+
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8001:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+    command: python prototype/worker.py --host 0.0.0.0 --port 8000
+
+  worker2:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8002:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+    command: python prototype/worker.py --host 0.0.0.0 --port 8000
+
+  # Secure worker for PQC testing
+  worker_secure:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8003:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+    command: python prototype/worker.py --host 0.0.0.0 --port 8000

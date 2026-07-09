@@ -1,0 +1,63 @@
+# Mohawk Inference Engine Worker - Production Docker Image
+# Version: 2.1.0 - Linux/ARM64 Optimized
+
+FROM python:3.12-bookworm
+
+# Set environment variables for production
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+# Build tools for ARM64, service discovery, and GPU support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    git \
+    curl \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    libgl1 \
+    libegl1 \
+    libxkbcommon-x11-0 \
+    libdbus-1-3 \
+    libegl1-mesa \
+    avahi-daemon \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir "onnxruntime>=1.16.0" || echo "ONNX Runtime optional"
+
+# Copy application code
+COPY mohawk_gui/ ./mohawk_gui/
+COPY prototype/ ./prototype/
+
+# Create non-root user for security (production best practice)
+RUN groupadd mohawk && \
+    useradd -r -g mohawk mohawk && \
+    chown -R mohawk:mohawk /app
+
+# Create directories for runtime data
+RUN mkdir -p /app/certs /app/logs /app/models && \
+    chown -R mohawk:mohawk /app/certs /app/logs /app/models
+
+USER mohawk
+
+# Expose ports
+EXPOSE 8003
+
+# Health check with timeout and retries
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8003/health || exit 1
+
+# Default command - run worker with service discovery
+CMD ["python", "-m", "uvicorn", "prototype.worker_secure:app", "--host", "0.0.0.0", "--port", "8003"]
