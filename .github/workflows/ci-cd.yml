@@ -8,7 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.75
+  RUST_VERSION: 1.85
+  CARGO_BUILD_JOBS: 1
 
 jobs:
   # Build and test Rust server
