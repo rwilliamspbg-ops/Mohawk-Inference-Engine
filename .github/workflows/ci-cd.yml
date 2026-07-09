@@ -99,8 +99,8 @@ jobs:
         file: ./mohawk-server/Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}/mohawk-server:latest
-          ghcr.io/${{ github.repository }}/mohawk-server:${{ github.sha }}
+          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server:latest
+          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
@@ -111,8 +111,8 @@ jobs:
         file: ./mohawk-server/Dockerfile.cuda
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}/mohawk-server-cuda:latest
-          ghcr.io/${{ github.repository }}/mohawk-server-cuda:${{ github.sha }}
+          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server-cuda:latest
+          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server-cuda:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
