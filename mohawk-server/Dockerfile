@@ -1,5 +1,5 @@
 # Mohawk Inference Engine - CPU Version
-FROM rust:1.75-slim as builder
+FROM rust:1.87-slim AS builder
 
 WORKDIR /app
 
@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
+
+ENV CC=clang
+ENV CXX=clang++
 
 # Copy source code
 COPY Cargo.toml Cargo.lock* ./

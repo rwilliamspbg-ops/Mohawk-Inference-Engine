@@ -5,6 +5,9 @@ edition = "2021"
 description = "Production-ready LLM Inference Engine with GGUF support and OpenAI-compatible API"
 license = "MIT"
 
+[features]
+cuda = ["llama-cpp-2/cuda"]
+
 [dependencies]
 # Web Framework
 axum = { version = "0.7", features = ["macros"] }
