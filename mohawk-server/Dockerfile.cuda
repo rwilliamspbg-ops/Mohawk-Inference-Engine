@@ -1,12 +1,12 @@
 # Mohawk Inference Engine - CUDA Version
-FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 as builder
+FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS builder
 
 WORKDIR /app
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
-    rustc \
-    cargo \
+    ca-certificates \
+    curl \
     cmake \
     git \
     clang \
@@ -14,6 +14,12 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.87.0 --profile minimal
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+ENV CC=clang
+ENV CXX=clang++
 
 # Copy source code
 COPY Cargo.toml Cargo.lock* ./
