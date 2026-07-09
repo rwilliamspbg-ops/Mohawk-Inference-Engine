@@ -50,15 +50,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!response.ok) throw new Error('Failed to fetch models');
       const data = await response.json();
 
-      const models: Model[] = data.data.map((m: any) => ({
-        id: m.id,
-        name: m.name || m.id,
-        description: `${m.parameters || 'Unknown'} parameters`,
-        parameters: m.parameters?.toString() ?? 'Unknown',
-        quantization: m.quantization || 'unknown',
-        size: `${m.size_gb || 'Unknown'} GB`,
-        status: m.loaded ? 'loaded' as const : 'unloaded' as const,
-      }));
+      const models: Model[] = data.data.map((m: any) => {
+        const parameters = m.parameters != null ? String(m.parameters) : 'Unknown';
+
+        return {
+          id: m.id,
+          name: m.name || m.id,
+          description: `${parameters} parameters`,
+          parameters,
+          quantization: m.quantization || 'unknown',
+          size: `${m.size_gb || 'Unknown'} GB`,
+          status: m.loaded ? 'loaded' as const : 'unloaded' as const,
+        };
+      });
       
       set({ models, error: null });
     } catch (error) {
