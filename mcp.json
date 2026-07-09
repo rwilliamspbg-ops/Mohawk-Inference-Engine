@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "engine": {
+    "name": "Mohawk-Inference-Engine",
+    "max_concurrent_requests": 10,
+    "default_backend": "llama-cpp"
+  },
+  "models": [
+    {
+      "id": "llama-3.2-3b-instruct",
+      "name": "Llama 3.2 3B Instruct",
+      "path": "/models/llama-3.2-3b-instruct.Q4_K_M.gguf",
+      "context_length": 8192,
+      "embedding": false,
+      "system_prompt": "You are a helpful, harmless, and honest AI assistant developed by Mohawk.",
+      "hardware_config": {
+        "n_gpu_layers": 30,
+        "main_gpu": 0,
+        "tensor_split": [0.8, 0.2],
+        "offload_kqv": true,
+        "flash_attn": true
+      }
+    },
+    {
+      "id": "mistral-7b-v0.3",
+      "name": "Mistral 7B v0.3",
+      "path": "/models/mistral-7b-v0.3.Q5_K_M.gguf",
+      "context_length": 32768,
+      "embedding": true,
+      "system_prompt": "You are Mistral, an advanced AI capable of complex reasoning.",
+      "hardware_config": {
+        "n_gpu_layers": 24,
+        "main_gpu": 0,
+        "tensor_split": [1.0],
+        "offload_kqv": true,
+        "flash_attn": false
+      }
+    }
+  ],
+  "system_prompts": {
+    "default": "You are a helpful AI assistant.",
+    "coder": "You are an expert software engineer. Provide clean, efficient, and well-commented code.",
+    "creative": "You are a creative writer. Focus on storytelling, imagery, and emotional depth.",
+    "analyst": "You are a data analyst. Focus on facts, logic, and structured outputs."
+  },
+  "metrics": {
+    "enabled": true,
+    "refresh_rate_ms": 500,
+    "expose_hardware": true,
+    "log_level": "info"
+  },
+  "security": {
+    "api_keys": ["mk_live_1234567890"],
+    "cors_origins": ["http://localhost:3000", "http://localhost:5173"]
+  }
+}
