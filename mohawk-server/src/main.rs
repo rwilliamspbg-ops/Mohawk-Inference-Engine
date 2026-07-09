@@ -10,13 +10,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "8080".to_string())
         .parse()
         .unwrap_or(8080);
-    
+
     let config = ServerConfig {
         host,
         port,
         default_model: None,
     };
-    
+
     let server = Server::new(config)?;
     server.run().await
 }

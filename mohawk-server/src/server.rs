@@ -6,6 +6,7 @@ use crate::engine::InferenceEngine;
 use crate::init_logging;
 use axum::Router;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tracing::info;
 
 /// Server configuration
@@ -35,14 +36,14 @@ pub struct Server {
 impl Server {
     /// Create a new server with configuration
     pub fn new(config: ServerConfig) -> Result<Self, crate::error::MohawkError> {
-        let engine = InferenceEngine::new()?;
-        
-        Ok(Self {
-            config,
-            engine,
-        })
+        let mut engine = InferenceEngine::new(None)?;
+        if let Some(default_model) = config.default_model.as_deref() {
+            engine.set_default_model(default_model);
+        }
+
+        Ok(Self { config, engine })
     }
-    
+
     /// Register default models for the server
     pub async fn register_default_models(&self) -> Result<(), crate::error::MohawkError> {
         // Register pre-configured models (similar to LM Studio)
@@ -72,32 +73,31 @@ impl Server {
                 loaded: false,
             },
         ];
-        
+
         for model in models {
             self.engine.register_model(model).await?;
         }
-        
+
         info!("Registered {} default models", 3);
         Ok(())
     }
-    
+
     /// Build the Axum router
     fn build_router(&self) -> Router {
         api::create_router(self.engine.clone())
     }
-    
+
     /// Start the server
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         init_logging();
-        
+
         // Register default models
         self.register_default_models().await?;
-        
-        let addr: SocketAddr = format!("{}:{}", self.config.host, self.config.port)
-            .parse()?;
-        
+
+        let addr: SocketAddr = format!("{}:{}", self.config.host, self.config.port).parse()?;
+
         let router = self.build_router();
-        
+
         info!("🦅 Mohawk Inference Engine starting on http://{}", addr);
         info!("API endpoints:");
         info!("  - Health:     GET  http://{}/health", addr);
@@ -107,15 +107,17 @@ impl Server {
         info!("  - Chat:       POST http://{}/v1/chat/completions", addr);
         info!("  - Metrics:    GET  http://{}/metrics", addr);
         info!("");
-        info!("OpenAI Compatible: Use with any OpenAI SDK by setting base_url to http://{}", addr);
-        
-        axum::Server::bind(&addr)
-            .serve(router.into_make_service())
-            .await?;
-        
+        info!(
+            "OpenAI Compatible: Use with any OpenAI SDK by setting base_url to http://{}",
+            addr
+        );
+
+        let listener = TcpListener::bind(addr).await?;
+        axum::serve(listener, router).await?;
+
         Ok(())
     }
-    
+
     /// Get the engine instance for testing
     pub fn engine(&self) -> &InferenceEngine {
         &self.engine
