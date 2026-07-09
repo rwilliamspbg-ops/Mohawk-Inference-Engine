@@ -91,6 +91,9 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Normalize image repository path
+      run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
     
     - name: Build and push CPU image
       uses: docker/build-push-action@v5
@@ -99,8 +102,8 @@ jobs:
         file: ./mohawk-server/Dockerfile
         push: true
         tags: |
-          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server:latest
-          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server:${{ github.sha }}
+          ${{ env.IMAGE_REPO }}/mohawk-server:latest
+          ${{ env.IMAGE_REPO }}/mohawk-server:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
@@ -111,8 +114,8 @@ jobs:
         file: ./mohawk-server/Dockerfile.cuda
         push: true
         tags: |
-          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server-cuda:latest
-          ghcr.io/rwilliamspbg-ops/mohawk-inference-engine/mohawk-server-cuda:${{ github.sha }}
+          ${{ env.IMAGE_REPO }}/mohawk-server-cuda:latest
+          ${{ env.IMAGE_REPO }}/mohawk-server-cuda:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
