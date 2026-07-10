@@ -1,7 +1,7 @@
-import uuid
 import pickle
-from prototype.controller_secure import SecureController
+import uuid
 
+from prototype.controller_secure import SecureController
 
 class SessionManager:
     def __init__(self, workers):
@@ -31,7 +31,7 @@ class SessionManager:
         s = self.sessions[session_id]
         x_blob = pickle.dumps(x)
         out_blob = self.controller.run_distributed(
-            s['assigned'], x_blob, encrypt=s['encrypt']
+            s["assigned"], x_blob, encrypt=s["encrypt"]
         )
         out = pickle.loads(out_blob)
         return out

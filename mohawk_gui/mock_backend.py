@@ -1,15 +1,14 @@
 """Lightweight backend API used by docker-compose for local GUI verification."""
 
 from datetime import datetime
+
 from fastapi import FastAPI
 
 app = FastAPI(title="Mohawk GUI Mock Backend", version="1.0.0")
 
-
 @app.get("/health")
 async def health() -> dict:
     return {"status": "healthy", "service": "mohawk-gui-backend"}
-
 
 @app.get("/api/workers")
 async def list_workers() -> dict:
@@ -36,11 +35,9 @@ async def list_workers() -> dict:
         ]
     }
 
-
 @app.post("/api/workers/connect")
 async def connect_workers() -> dict:
     return {"status": "ok", "connected": 2}
-
 
 @app.get("/api/metrics")
 async def metrics() -> dict:
@@ -54,7 +51,6 @@ async def metrics() -> dict:
             "timestamp": datetime.utcnow().isoformat() + "Z",
         }
     }
-
 
 @app.get("/api/sessions")
 async def sessions() -> dict:
@@ -70,7 +66,6 @@ async def sessions() -> dict:
             }
         ]
     }
-
 
 @app.post("/api/sessions/{session_id}/cancel")
 async def cancel_session(session_id: str) -> dict:

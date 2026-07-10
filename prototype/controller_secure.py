@@ -9,7 +9,6 @@ import requests
 from prototype.crypto_improved import AEAD, PQCAdapter, ReplayProtectedAEAD, b64, ub64
 from prototype.model_tools import ToyModel, WeightSlice
 
-
 class SecureController:
     """
     Secure controller with replay-protected encryption.
@@ -143,7 +142,14 @@ class SecureController:
         self.kems.pop(worker_url, None)
         return self.handshake_with_worker(worker_url)
 
-    def _post_with_retry(self, worker_url: str, path: str, payload: dict, timeout: int, max_attempts: int = 3):
+    def _post_with_retry(
+        self,
+        worker_url: str,
+        path: str,
+        payload: dict,
+        timeout: int,
+        max_attempts: int = 3,
+    ):
         """POST helper with exponential backoff for transient worker failures."""
         backoff_base = 0.1
 
@@ -160,7 +166,9 @@ class SecureController:
                 )
                 time.sleep(sleep_t)
 
-    def _ensure_slice_on_worker(self, slice_id: str, worker_url: str, encrypt: bool = False) -> None:
+    def _ensure_slice_on_worker(
+        self, slice_id: str, worker_url: str, encrypt: bool = False
+    ) -> None:
         """Ensure a slice is present on a specific worker, used for failover/reconnect."""
         if slice_id not in self.slice_cache:
             raise ValueError(f"slice cache miss for {slice_id}")
@@ -267,7 +275,9 @@ class SecureController:
                         payload = {
                             "slice_id": slice_id,
                             "encrypted": True,
-                            "manifest": {"client_id": self._client_id_for_worker(candidate)},
+                            "manifest": {
+                                "client_id": self._client_id_for_worker(candidate)
+                            },
                             "input_b64": b64(ct),
                             "nonce_b64": b64(nonce),
                         }
@@ -277,7 +287,9 @@ class SecureController:
                             "input_b64": base64.b64encode(current).decode("ascii"),
                         }
 
-                    response = self._post_with_retry(candidate, "/execute", payload, timeout=30)
+                    response = self._post_with_retry(
+                        candidate, "/execute", payload, timeout=30
+                    )
                     used_worker = candidate
                     break
                 except Exception as exc:

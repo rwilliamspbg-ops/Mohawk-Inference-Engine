@@ -8,7 +8,6 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-
 class WeightSlice:
     """Encapsulates a model slice with metadata."""
 
@@ -94,7 +93,6 @@ class WeightSlice:
         return (
             f"WeightSlice({self.start_layer}:{self.end_layer}, version={self.version})"
         )
-
 
 class ToyModel:
     """
@@ -257,7 +255,6 @@ class ToyModel:
 
     def __repr__(self):
         return f"ToyModel(layers={self.layer_sizes}, version={self.version})"
-
 
 def create_model_from_slice(slice_obj: WeightSlice) -> ToyModel:
     """Create a ToyModel from a WeightSlice for testing."""

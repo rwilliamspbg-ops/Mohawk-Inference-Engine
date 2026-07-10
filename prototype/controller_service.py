@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
-import uuid
 import threading
+import uuid
 from datetime import datetime, timezone
 from typing import Literal
 from urllib.parse import urlparse
@@ -15,10 +15,8 @@ from pydantic import BaseModel, Field
 
 app = FastAPI(title="Mohawk Controller Service", version="1.0.0")
 
-
 class LoadModelRequest(BaseModel):
     model: str
-
 
 class ChatRequest(BaseModel):
     message: str
@@ -27,19 +25,15 @@ class ChatRequest(BaseModel):
     max_tokens: int = 2048
     system_prompt: str = "You are a helpful AI assistant."
 
-
 class QueueRequest(BaseModel):
     priority: Literal["high", "normal"] = "normal"
-
 
 class AddWorkerRequest(BaseModel):
     host: str = Field(min_length=1)
     port: int = Field(ge=1, le=65535)
 
-
 class DownloadModelRequest(BaseModel):
     model_id: str
-
 
 STATE = {
     "workers": [],
@@ -70,18 +64,15 @@ STATE = {
 
 STATE_LOCK = threading.RLock()
 
-
 def _worker_urls() -> list[str]:
     raw = os.getenv("WORKER_URLS", "")
     return [item.strip() for item in raw.split(",") if item.strip()]
-
 
 def _worker_host_port(worker_url: str) -> tuple[str, int]:
     parsed = urlparse(worker_url)
     host = parsed.hostname or worker_url.split("://", 1)[-1].split(":", 1)[0]
     port = parsed.port or 8000
     return host, port
-
 
 def _worker_entries_from_env() -> list[dict]:
     with STATE_LOCK:
@@ -103,7 +94,6 @@ def _worker_entries_from_env() -> list[dict]:
         )
     return workers
 
-
 def _merged_workers() -> list[dict]:
     env_workers = _worker_entries_from_env()
     with STATE_LOCK:
@@ -116,11 +106,9 @@ def _merged_workers() -> list[dict]:
             merged.append(worker)
     return merged
 
-
 def _session_status() -> str:
     with STATE_LOCK:
         return "Running" if STATE["current_model"] else "Idle"
-
 
 def _synthesize_sessions() -> list[dict]:
     with STATE_LOCK:
@@ -141,7 +129,6 @@ def _synthesize_sessions() -> list[dict]:
         }
     ]
 
-
 def _check_worker_health(host: str, port: int) -> str:
     try:
         r = requests.get(f"http://{host}:{port}/health", timeout=1)
@@ -149,11 +136,9 @@ def _check_worker_health(host: str, port: int) -> str:
     except Exception:
         return "Disconnected"
 
-
 @app.get("/health")
 async def health() -> dict:
     return {"status": "healthy", "service": "controller"}
-
 
 @app.get("/api/models")
 async def list_models() -> dict:
@@ -166,19 +151,19 @@ async def list_models() -> dict:
         "current_model": current_model,
     }
 
-
 @app.post("/api/models/load")
 async def load_model(request: LoadModelRequest) -> dict:
     with STATE_LOCK:
         names = {m["name"] for m in STATE["models"]}
         if request.model not in names:
-            raise HTTPException(status_code=404, detail=f"model not found: {request.model}")
+            raise HTTPException(
+                status_code=404, detail=f"model not found: {request.model}"
+            )
 
         STATE["current_model"] = request.model
         for model in STATE["models"]:
             model["status"] = "Loaded" if model["name"] == request.model else "Ready"
     return {"status": "ok", "model": request.model}
-
 
 @app.post("/api/models/download")
 async def download_model(request: DownloadModelRequest) -> dict:
@@ -189,7 +174,11 @@ async def download_model(request: DownloadModelRequest) -> dict:
     with STATE_LOCK:
         for model in STATE["models"]:
             if model["name"] == model_name:
-                return {"status": "ok", "model": model_name, "message": "Model already exists"}
+                return {
+                    "status": "ok",
+                    "model": model_name,
+                    "message": "Model already exists",
+                }
 
         STATE["models"].append(
             {
@@ -202,7 +191,6 @@ async def download_model(request: DownloadModelRequest) -> dict:
         )
     return {"status": "ok", "model": model_name}
 
-
 @app.get("/api/workers")
 async def list_workers() -> dict:
     workers = _merged_workers()
@@ -214,15 +202,15 @@ async def list_workers() -> dict:
 
     return {"workers": workers}
 
-
 @app.post("/api/workers/connect")
 async def connect_workers() -> dict:
     workers = _merged_workers()
     connected = sum(
-        1 for worker in workers if _check_worker_health(worker["host"], worker["port"]) == "Connected"
+        1
+        for worker in workers
+        if _check_worker_health(worker["host"], worker["port"]) == "Connected"
     )
     return {"status": "ok", "connected": connected, "total": len(workers)}
-
 
 @app.post("/api/workers/add")
 async def add_worker(request: AddWorkerRequest) -> dict:
@@ -234,7 +222,9 @@ async def add_worker(request: AddWorkerRequest) -> dict:
         current_model = STATE["current_model"]
         existing = {(w["host"], w["port"]) for w in _merged_workers()}
         if (host, request.port) in existing:
-            raise HTTPException(status_code=409, detail=f"worker already exists: {host}:{request.port}")
+            raise HTTPException(
+                status_code=409, detail=f"worker already exists: {host}:{request.port}"
+            )
 
     worker = {
         "id": f"worker_custom_{len(STATE['workers']) + 1}",
@@ -249,7 +239,6 @@ async def add_worker(request: AddWorkerRequest) -> dict:
         STATE["workers"].append(worker)
     return {"status": "ok", "worker": worker}
 
-
 @app.post("/api/queue")
 async def queue_job(request: QueueRequest) -> dict:
     job = {
@@ -261,7 +250,6 @@ async def queue_job(request: QueueRequest) -> dict:
         STATE["queue"].append(job)
     return {"status": "ok", "job": job}
 
-
 @app.post("/api/inference/chat")
 async def chat_inference(request: ChatRequest) -> dict:
     truncated = request.message.strip()[:240]
@@ -271,17 +259,16 @@ async def chat_inference(request: ChatRequest) -> dict:
     with STATE_LOCK:
         model = STATE["current_model"] or "No model loaded"
 
-    response = (
-        f"[{model}] {truncated}"
-    )
+    response = f"[{model}] {truncated}"
     return {"status": "ok", "response": response}
-
 
 @app.get("/api/metrics")
 async def metrics() -> dict:
     workers = _merged_workers()
     connected = sum(
-        1 for worker in workers if _check_worker_health(worker["host"], worker["port"]) == "Connected"
+        1
+        for worker in workers
+        if _check_worker_health(worker["host"], worker["port"]) == "Connected"
     )
     worker_count = max(len(workers), 1)
     return {
@@ -298,18 +285,15 @@ async def metrics() -> dict:
         }
     }
 
-
 @app.get("/api/sessions")
 async def sessions() -> dict:
     return {"sessions": _synthesize_sessions()}
-
 
 @app.post("/api/sessions/{session_id}/cancel")
 async def cancel_session(session_id: str) -> dict:
     with STATE_LOCK:
         STATE["sessions"] = [s for s in STATE["sessions"] if s.get("id") != session_id]
     return {"status": "ok", "cancelled": session_id}
-
 
 @app.post("/api/security/jwt/refresh")
 async def refresh_jwt() -> dict:
@@ -320,7 +304,6 @@ async def refresh_jwt() -> dict:
         "status": "ok",
         "refresh_count": refresh_count,
     }
-
 
 @app.post("/api/security/pqc/enable")
 async def enable_pqc() -> dict:

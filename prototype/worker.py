@@ -16,19 +16,16 @@ app = FastAPI(title="Mohawk Worker", version="v1.0")
 slices: Dict[str, WeightSlice] = {}
 slices_lock = asyncio.Lock()
 
-
 class PreloadRequest(BaseModel):
     slice_id: str
     manifest: dict
     weights_b64: str
     version: str = "v1.0"  # Model version from manifest
 
-
 class ExecRequest(BaseModel):
     slice_id: str
     input_b64: str
     version: str = "v1.0"  # Optional version check
-
 
 @app.post("/preload")
 async def preload(req: PreloadRequest):
@@ -78,7 +75,6 @@ async def preload(req: PreloadRequest):
                 "detail": "Pickle deserialization not supported. Use binary format.",
             }, 400
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.post("/execute")
 async def execute(req: ExecRequest):
@@ -134,7 +130,6 @@ async def execute(req: ExecRequest):
                 return {"error": "Pickle deserialization error"}, 400
             raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint for load balancers."""
@@ -145,7 +140,6 @@ async def health_check():
         "version": "v1.0",
     }
 
-
 @app.get("/metrics")
 async def get_metrics():
     """Basic metrics endpoint."""
@@ -153,7 +147,6 @@ async def get_metrics():
         "slice_count": len(slices),
         "slices": list(slices.keys())[:10],  # First 10 slice IDs
     }
-
 
 if __name__ == "__main__":
     import argparse

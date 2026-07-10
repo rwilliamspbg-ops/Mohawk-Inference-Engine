@@ -10,7 +10,6 @@ from prototype.integration_helpers import (
 from prototype.model_tools import ToyModel
 from prototype.session_manager import SessionManager
 
-
 @pytest.fixture()
 def inprocess_worker(monkeypatch):
     client = make_worker_client()
@@ -18,7 +17,6 @@ def inprocess_worker(monkeypatch):
     monkeypatch.setattr(controller_secure.requests, "post", transport.post)
     yield client
     reset_worker_state()
-
 
 def test_worker_leave_triggers_slice_reshare_without_errors(inprocess_worker):
     workers = ["http://worker-a", "http://worker-b"]
@@ -37,7 +35,6 @@ def test_worker_leave_triggers_slice_reshare_without_errors(inprocess_worker):
     sm.end_session(sid)
 
     assert np.allclose(out, baseline)
-
 
 def test_worker_join_leave_reconnect_encrypted_flow(inprocess_worker):
     workers = ["http://worker-a"]

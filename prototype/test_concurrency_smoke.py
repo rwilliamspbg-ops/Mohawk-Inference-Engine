@@ -9,7 +9,6 @@ from prototype.integration_helpers import (
 )
 from prototype.load_harness import run_load
 
-
 @pytest.fixture()
 def inprocess_worker(monkeypatch):
     client = make_worker_client()
@@ -17,7 +16,6 @@ def inprocess_worker(monkeypatch):
     monkeypatch.setattr(controller_secure.requests, "post", transport.post)
     yield client
     reset_worker_state()
-
 
 @pytest.mark.integration
 def test_concurrency_smoke(inprocess_worker):
