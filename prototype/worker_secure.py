@@ -32,12 +32,10 @@ metrics = {
 metrics_lock = threading.Lock()
 telemetry = Telemetry(metrics, metrics_lock)
 
-
 class HandshakeRequest(BaseModel):
     client_pub_b64: str
     client_id: str | None = None
     oqs_pub_b64: str | None = None
-
 
 class PreloadRequest(BaseModel):
     slice_id: str
@@ -46,14 +44,12 @@ class PreloadRequest(BaseModel):
     encrypted: bool = False
     nonce_b64: str = None
 
-
 class ExecRequest(BaseModel):
     slice_id: str
     input_b64: str
     manifest: dict | None = None
     encrypted: bool = False
     nonce_b64: str = None
-
 
 @app.post("/handshake")
 async def handshake(req: HandshakeRequest):
@@ -129,7 +125,6 @@ async def handshake(req: HandshakeRequest):
 
     return resp
 
-
 @app.post("/preload")
 @telemetry.timed("preload_time_sum", "preload_time_count")
 async def preload(req: PreloadRequest):
@@ -193,7 +188,6 @@ async def preload(req: PreloadRequest):
             )
 
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @app.post("/execute")
 @telemetry.timed("execute_time_sum", "execute_time_count")
@@ -264,12 +258,14 @@ async def execute(req: ExecRequest):
 
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "mohawk-worker", "timestamp": datetime.now().isoformat()}
-
+    return {
+        "status": "healthy",
+        "service": "mohawk-worker",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 @app.get("/metrics")
 async def get_metrics():
@@ -325,12 +321,10 @@ async def get_metrics():
 
     return JSONResponse(content=out)
 
-
 @app.get("/api/workers")
 async def list_workers():
     """Return list of loaded model slices (workers)."""
     return {"workers": list(slices.keys()), "count": len(slices)}
-
 
 if __name__ == "__main__":
     import argparse

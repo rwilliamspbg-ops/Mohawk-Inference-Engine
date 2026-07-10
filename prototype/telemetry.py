@@ -1,7 +1,6 @@
-import time
 import inspect
+import time
 from functools import wraps
-
 
 class Telemetry:
     def __init__(self, metrics_dict, lock):
@@ -18,7 +17,7 @@ class Telemetry:
             # also update histogram buckets for this metric prefix
             try:
                 base = name_sum
-                if base.endswith('_sum'):
+                if base.endswith("_sum"):
                     base = base[:-4]
                 hist_prefix = f"{base}_hist"
                 # find the appropriate bucket
@@ -37,6 +36,7 @@ class Telemetry:
     def timed(self, name_sum, name_count):
         def decorator(func):
             if inspect.iscoroutinefunction(func):
+
                 async def async_wrapper(*args, **kwargs):
                     t0 = time.time()
                     try:
@@ -48,6 +48,7 @@ class Telemetry:
                 wraps(func)(async_wrapper)
                 return async_wrapper
             else:
+
                 def sync_wrapper(*args, **kwargs):
                     t0 = time.time()
                     try:

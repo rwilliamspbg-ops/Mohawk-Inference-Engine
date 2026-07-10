@@ -17,7 +17,6 @@ import requests
 
 from prototype.model_tools import ToyModel, WeightSlice
 
-
 def test_pickle_not_used():
     """Verify pickle is not used in serialization."""
     model = ToyModel([8, 16, 16, 8], seed=42)
@@ -33,7 +32,6 @@ def test_pickle_not_used():
     assert isinstance(slice_bytes, bytes)
     assert b"pickle" not in slice_bytes.lower()
 
-
 def test_safe_deserialization():
     """Test that deserialization works without pickle."""
     model = ToyModel([8, 16, 16, 8], seed=42)
@@ -43,7 +41,6 @@ def test_safe_deserialization():
 
     # Verify we can reconstruct (simplified test)
     assert len(model_bytes) > 0
-
 
 def test_slice_serialization():
     """Test slice object serialization."""
@@ -59,7 +56,6 @@ def test_slice_serialization():
     # Verify version is preserved
     assert slice_obj.version == "v1.0"
 
-
 def test_weight_shapes():
     """Test that weight shapes are preserved."""
     model = ToyModel([8, 16, 16, 8], seed=42)
@@ -69,7 +65,6 @@ def test_weight_shapes():
 
     assert "layer_0_0_weight" in shapes
     assert "layer_0_0_bias" in shapes
-
 
 def test_replay_protection_basic():
     """Test replay protection prevents nonce reuse."""
@@ -91,7 +86,6 @@ def test_replay_protection_basic():
 
     # Nonce should now be in seen_nonces
     assert nonce_hex in aead.seen_nonces, "Nonce should have been marked as seen"
-
 
 def test_replay_protection_fresh_nonce():
     """Test that fresh nonces work correctly."""
@@ -116,7 +110,6 @@ def test_replay_protection_fresh_nonce():
         decrypted = aead_verify.decrypt(nonce, ct)
         assert decrypted == plaintext
 
-
 def test_hkdf_versioned_info():
     """Test that HKDF uses versioned info string."""
     from cryptography.hazmat.primitives.asymmetric import x25519
@@ -135,7 +128,6 @@ def test_hkdf_versioned_info():
     # Verify key is derived (non-empty)
     assert len(shared_key) == 32
 
-
 def test_input_validation():
     """Test that worker validates input sizes."""
     # Test with very large payload
@@ -153,7 +145,6 @@ def test_input_validation():
         # Service not running is acceptable for this test
         pytest.skip("Worker service not running")
 
-
 def test_connection_pooling():
     """Test that controller uses connection pooling."""
     from prototype.controller import Controller
@@ -167,14 +158,12 @@ def test_connection_pooling():
     except (ConnectionError, requests.exceptions.ConnectionError):
         pytest.skip("Controller service not available")
 
-
 def test_model_versioning():
     """Test that model versions are tracked."""
     model = ToyModel([8, 16, 16, 8], seed=42, version="v1.0")
 
     slice_obj = model.slice(0, 2)
     assert slice_obj.version == "v1.0"
-
 
 def test_worker_health_endpoint():
     """Test worker health check endpoint."""
@@ -187,7 +176,6 @@ def test_worker_health_endpoint():
         assert "timestamp" in data
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         pytest.skip("Worker service not running on port 8000")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

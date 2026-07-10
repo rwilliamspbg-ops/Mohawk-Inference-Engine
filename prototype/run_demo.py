@@ -3,11 +3,9 @@ import numpy as np
 from prototype.controller import Controller
 from prototype.model_tools import ToyModel, WeightSlice
 
-
 def single_node_run(model, x):
     """Baseline: run model on single node (all layers)."""
     return model.forward(x)
-
 
 def distributed_run(model, x):
     """
@@ -24,7 +22,6 @@ def distributed_run(model, x):
     out = np.frombuffer(out_bytes, dtype=np.float32)
 
     return out
-
 
 if __name__ == "__main__":
     # Build model

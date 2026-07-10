@@ -7,7 +7,6 @@ import requests
 
 from prototype.model_tools import ToyModel, WeightSlice
 
-
 class Controller:
     """
     Model partitioning controller with safe serialization.

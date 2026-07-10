@@ -22,7 +22,6 @@ try:
 except Exception:
     OQS_AVAILABLE = False
 
-
 class ReplayProtectedAEAD:
     """
     AEAD encryption with replay protection.
@@ -118,7 +117,6 @@ class ReplayProtectedAEAD:
         # The AEAD authentication will still prevent tampering
         return self.aead.decrypt(nonce, ciphertext, aad)
 
-
 class PQCAdapter:
     """Hybrid PQC adapter with improved key management."""
 
@@ -213,7 +211,6 @@ class PQCAdapter:
 
         raise RuntimeError("OQS decapsulation not supported")
 
-
 def derive_hybrid_key(shared_x25519: bytes, shared_oqs: bytes) -> bytes:
     """Derive a single AEAD key from two raw shared secrets."""
     combined = (shared_x25519 or b"") + (shared_oqs or b"")
@@ -225,7 +222,6 @@ def derive_hybrid_key(shared_x25519: bytes, shared_oqs: bytes) -> bytes:
         info=b"mohawk-v1-hybrid-aead-key",  # Versioned info string
     )
     return hkdf.derive(combined)
-
 
 class AEAD:
     """
@@ -246,11 +242,9 @@ class AEAD:
     def decrypt(self, nonce: bytes, ciphertext: bytes, aad: bytes = b"") -> bytes:
         return self.aead.decrypt(nonce, ciphertext, aad)
 
-
 # Helper functions
 def b64(x: bytes) -> str:
     return base64.b64encode(x).decode("ascii")
-
 
 def ub64(s: str) -> bytes:
     return base64.b64decode(s)

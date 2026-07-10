@@ -6,7 +6,6 @@ import requests
 
 from prototype import worker_secure
 
-
 def reset_worker_state() -> None:
     worker_secure.slices.clear()
     worker_secure.keys.clear()
@@ -14,12 +13,10 @@ def reset_worker_state() -> None:
         for key in worker_secure.metrics:
             worker_secure.metrics[key] = 0
 
-
 def make_worker_client() -> httpx.Client:
     reset_worker_state()
     transport = httpx.ASGITransport(app=worker_secure.app)
     return httpx.Client(transport=transport, base_url="http://worker-inproc")
-
 
 class _InProcessResponse:
     def __init__(self, response, url: str):
@@ -37,7 +34,6 @@ class _InProcessResponse:
                 f"{self.status_code} error for {self.url}",
                 response=self._response,
             )
-
 
 class InProcessWorkerTransport:
     def __init__(self, client: httpx.Client):
