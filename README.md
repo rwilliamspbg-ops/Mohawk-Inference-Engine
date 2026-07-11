@@ -71,36 +71,51 @@ A secure, scalable GUI for managing multi-device inference sessions with **enter
 
 ## 📦 Quick Start
 
-### Installation (3 minutes)
+### Option A: One-Click Launcher (Recommended)
 
 ```bash
-# Clone repository
-cd C:\Users\rwill\Mohawk-Inference-Engine
-
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Generate auth key (first run only)
-mkdir -p certs
-python mohawk_gui/main.py --key-file certs/auth_key.pem
+./launch.sh
 ```
 
-### Running the Dashboard
+This bootstraps a local virtual environment, installs missing dependencies, and opens the interactive launcher for native or Docker full-stack modes.
+
+### Option B: Docker Full Stack
 
 ```bash
-# Development mode
-python mohawk_gui/main.py
+docker compose up -d --build
+```
 
-# Production mode with SSL
-python mohawk_gui/main.py \
-    --host 0.0.0.0 \
-    --port 8003 \
-    --ssl-enabled \
-    --key-file certs/auth_key.pem
+Services:
+- GUI backend: `http://localhost:8003`
+- Worker service: `http://localhost:8004`
+
+Desktop GUI auto-launches when the display environment supports it. To skip container desktop GUI launch:
+
+```bash
+MOHAWK_SKIP_DESKTOP_GUI=1 docker compose up -d --build
+```
+
+### Option C: Native API + Desktop GUI
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Start full stack from launcher
+python launch.py
+```
+
+### Validate Inference + Model Selection End-to-End
+
+```bash
+python test_user_functions.py
+```
+
+Expected summary:
+
+```text
+SUMMARY: 33/33 passed (100.0%)
 ```
 
 ### Building Executable (Windows)
@@ -266,8 +281,12 @@ docker run -d \
 
 ## 📚 Documentation
 
+- **[📦 Install Guide](INSTALL.md)** - prerequisites and environment setup
+- **[🛠️ Setup Guide](SETUP.md)** - local, Docker, and devcontainer run paths
 - **[📖 Dashboard Features Guide](mohawk_gui/DASHBOARD_FEATURES.md)** - Complete feature documentation
 - **[⚡ Quick Start Guide](mohawk_gui/QUICK_START.md)** - 3-minute setup guide
+- **[⚡ API Quick Start](QUICKSTART.md)** - endpoint-focused smoke flow
+- **[🐳 Docker Setup](DOCKER_SETUP.md)** - container runtime details and troubleshooting
 - **[🏗️ Implementation Plan](GUI_IMPLEMENTATION_PLAN.md)** - Architecture details
 - **[✅ Production Readiness](GUI_PRODUCTION_READINESS.md)** - Quality checklist
 
