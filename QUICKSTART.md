@@ -15,7 +15,17 @@ Mohawk is a production-grade AI inference engine with:
 
 ---
 
-## Quick Start (Docker)
+## Quick Start Paths
+
+### A) One-Click Launcher
+
+```bash
+./launch.sh
+```
+
+Use menu option 1 (Docker stack) or option 2 (Native host processes). The launcher now attempts to auto-open the desktop GUI when the runtime supports display output.
+
+### B) Docker Full Stack
 
 ### 1. Start All Services
 
@@ -25,6 +35,12 @@ docker compose up -d
 
 # Verify containers running
 docker ps
+```
+
+Optional: skip container desktop GUI service when running from raw compose.
+
+```bash
+MOHAWK_SKIP_DESKTOP_GUI=1 docker compose up -d --build
 ```
 
 **Expected Output:**
@@ -45,6 +61,21 @@ curl http://localhost:8004/health
 
 # Expected response:
 # {"status":"healthy","service":"...","timestamp":"2026-06-24T..."}
+```
+
+### C) Devcontainer
+
+```bash
+# In VS Code:
+# Dev Containers: Rebuild and Reopen in Container
+
+bash .devcontainer/post_create.sh
+```
+
+Fast smoke setup without expensive rebuild steps:
+
+```bash
+MOHAWK_SKIP_LIBOQS_BUILD=1 MOHAWK_SKIP_PY_DEPS=1 bash .devcontainer/post_create.sh
 ```
 
 ### 3. List Available Models
@@ -177,6 +208,23 @@ python test_user_functions.py
 
 # Expected output:
 # SUMMARY: 33/33 passed (100.0%)
+```
+
+### Validate Model Select + Chat Inference Only
+
+```bash
+# List models
+curl http://localhost:8003/api/models
+
+# Load model
+curl -X POST http://localhost:8003/api/models/load \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Llama-3-8B-Instruct-Q4_K_M"}'
+
+# Run chat inference
+curl -X POST http://localhost:8003/api/inference/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Hello from smoke test","temperature":0.7,"top_p":0.9,"max_tokens":128}'
 ```
 
 ### View Logs

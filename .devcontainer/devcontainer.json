@@ -3,9 +3,16 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
   "settings": {},
-  "extensions": [],
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-azuretools.vscode-docker"
+  ],
   "forwardPorts": [8003],
-  "postCreateCommand": "./.devcontainer/post_create.sh"
+  "postCreateCommand": "bash .devcontainer/post_create.sh"
 }

@@ -2,6 +2,43 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.1.1] - 2026-07-11
+
+### 🔧 Devcontainer and Setup Reliability
+
+- Updated `.devcontainer/devcontainer.json`:
+	- workspace path compatibility for Codespaces
+	- docker-outside-of-docker feature enablement
+	- Python and Docker VS Code extension recommendations
+	- explicit bash post-create invocation
+- Updated `.devcontainer/Dockerfile` with missing runtime and diagnostics packages.
+- Reworked `.devcontainer/post_create.sh` to be idempotent, root-safe, and configurable with:
+	- `MOHAWK_SKIP_LIBOQS_BUILD=1`
+	- `MOHAWK_SKIP_PY_DEPS=1`
+
+### 🖥️ Full-Stack Desktop GUI Launch Improvements
+
+- Fixed startup ordering in `mohawk_gui/main_window.py`:
+	- initialize status bar before tab refresh paths
+	- start background health thread only after UI widget initialization
+- Added environment-based backend URL overrides for desktop GUI runtime.
+- Added reusable desktop GUI launcher flow in `launch.py` for both native and Docker orchestration.
+- Updated `launch.sh` dependency probe to include `PyQt6`.
+- Added `mohawk-desktop-gui` service to `docker-compose.yml`.
+- Added full-stack parity services to `docker-compose.dev.yml` and adjusted conflicting host port mapping.
+
+### 📚 Documentation Updates
+
+- Updated `README.md` quick-start and documentation index.
+- Updated `QUICKSTART.md` with launcher/devcontainer paths and focused model/chat smoke checks.
+- Updated `DOCKER_SETUP.md` desktop GUI behavior notes and skip flag usage.
+- Added `INSTALL.md` and `SETUP.md` for clear install/runtime guidance.
+
+### ✅ Validation
+
+- End-to-end functional test executed: `python test_user_functions.py`.
+- Result: `33/33 passed (100.0%)` including model list/load and chat inference paths.
+
 ## [2.1.0] - 2024-01-15
 
 ### 🎉 Major Release: Professional Dashboard with LM Studio Features

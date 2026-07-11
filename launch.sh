@@ -36,7 +36,7 @@ source venv/bin/activate || . venv/bin/activate
 
 # Check if packages are already installed to make boot sub-second
 echo -e "${WHITE}Verifying library dependencies...${RESET}"
-if ! python3 -c "import fastapi, uvicorn, requests, cryptography, zeroconf, psutil" &> /dev/null; then
+if ! python3 -c "import fastapi, uvicorn, requests, cryptography, zeroconf, psutil, PyQt6" &> /dev/null; then
     echo -e "${GOLD}[INFO] Missing packages detected. Installing required dependencies from requirements.txt...${RESET}"
     pip install --upgrade pip
     pip install -r requirements.txt

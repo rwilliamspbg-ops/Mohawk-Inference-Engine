@@ -71,7 +71,20 @@ The GUI window will open and connect to the Docker-based backend services.
 |---------|------|----------|---------|
 | mohawk-gui | 8003 | Docker Container | Backend API & health endpoints |
 | mohawk-worker | 8004 | Docker Container | Inference worker service |
+| mohawk-desktop-gui | n/a | Docker Container | Desktop GUI launcher (display-dependent) |
 | PyQt6 GUI | (Local) | Your Machine | Desktop application interface |
+
+## Desktop GUI Launch Behavior
+
+- `docker compose up -d --build` includes `mohawk-desktop-gui` for one-click full-stack startup.
+- If `DISPLAY` is not set, the desktop GUI service exits cleanly and backend APIs continue running.
+- `launch.py` sets `MOHAWK_SKIP_DESKTOP_GUI=1` when orchestrating compose to avoid duplicate GUI instances, then launches host desktop GUI directly when supported.
+
+Skip container desktop GUI explicitly:
+
+```bash
+MOHAWK_SKIP_DESKTOP_GUI=1 docker compose up -d --build
+```
 
 ## Container Management
 
