@@ -56,6 +56,48 @@ services:
     networks:
       - mohawk-network
 
+  mohawk-desktop-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mohawk-desktop-gui
+    depends_on:
+      - mohawk-gui
+      - mohawk-worker
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DISPLAY=${DISPLAY}
+      - QT_QPA_PLATFORM=xcb
+      - MOHAWK_SKIP_DESKTOP_GUI=${MOHAWK_SKIP_DESKTOP_GUI:-0}
+      - MOHAWK_GUI_SERVICE_URL=http://host.docker.internal:8003
+      - MOHAWK_WORKER_SERVICE_URL=http://host.docker.internal:8004
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./certs:/app/certs
+      - ./logs:/app/logs
+    command: >
+      sh -c '
+      if [ "$$MOHAWK_SKIP_DESKTOP_GUI" = "1" ]; then
+        echo "Desktop GUI launch was skipped by the launcher.";
+        exit 0;
+      fi;
+      if [ -z "$$DISPLAY" ]; then
+        echo "DISPLAY is not set; skipping desktop GUI launch.";
+        exit 0;
+      fi;
+      until curl -fsS http://host.docker.internal:8003/health >/dev/null 2>&1; do
+        echo "Waiting for GUI backend...";
+        sleep 2;
+      done;
+      python mohawk_gui/main.py --port 8003
+      '
+    restart: "no"
+    networks:
+      - mohawk-network
+
 networks:
   mohawk-network:
     name: mohawk-network

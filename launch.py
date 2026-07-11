@@ -248,10 +248,12 @@ def launch_docker_stack():
 
     print(f"{WHITE}Executing: {GOLD}docker compose up -d --build{RESET}")
     try:
-        res = subprocess.run(["docker", "compose", "up", "-d"], capture_output=False)
+        compose_env = os.environ.copy()
+        compose_env["MOHAWK_SKIP_DESKTOP_GUI"] = "1"
+        res = subprocess.run(["docker", "compose", "up", "-d"], capture_output=False, env=compose_env)
         if res.returncode != 0:
             print(f"{GOLD}[INFO] 'docker compose' returned an error. Retrying with legacy 'docker-compose'...{RESET}")
-            subprocess.run(["docker-compose", "up", "-d"])
+            subprocess.run(["docker-compose", "up", "-d"], env=compose_env)
 
         print(f"\n{WHITE}Monitoring container boot health...{RESET}")
 
@@ -273,6 +275,7 @@ def launch_docker_stack():
             print(f"  • GUI backend running at: {CYAN}http://localhost:8003{RESET}")
             print(f"  • Secure worker mapped at: {CYAN}http://localhost:8004{RESET}")
             print(f"  • View metrics endpoint:  {CYAN}http://localhost:8003/api/metrics{RESET}")
+            launch_desktop_gui("http://localhost:8003", "http://localhost:8004")
             print(f"\n{WHITE}To monitor logs: {GOLD}docker compose logs -f{RESET}")
             print(f"To shutdown stack: {CRIMSON}docker compose down{RESET}")
         else:
@@ -323,18 +326,7 @@ def launch_native_stack():
             print(f"  • GUI backend: {CYAN}http://localhost:8003{RESET}")
             print(f"  • Worker:      {CYAN}http://localhost:8004{RESET}")
             print(f"\n{WHITE}All services started in the background. Press CTRL+C or clean up to shut them down.{RESET}")
-
-            # Offer to launch the PyQt6 Desktop GUI
-            try:
-                import PyQt6
-                print_border("─", CYAN, 80)
-                choice = input(f"Would you like to open the Desktop GUI dashboard? (y/n) [y]: ").strip().lower()
-                if choice in ["", "y", "yes"]:
-                    print(f"{WHITE}Opening PyQt6 Dashboard...{RESET}")
-                    p_gui = subprocess.Popen([sys.executable, "mohawk_gui/main.py", "--port", "8003"])
-                    local_processes.append(p_gui)
-            except ImportError:
-                print(f"\n{GOLD}[INFO] PyQt6 is not installed or X11 environment not available. Web GUI and API services are still fully accessible at http://localhost:8003!{RESET}")
+            launch_desktop_gui()
         else:
             print(f"\n{CRIMSON}❌ Failed to bind to ports. Please check logs and try again.{RESET}")
             shutdown_local_stack()
@@ -363,6 +355,32 @@ def shutdown_local_stack():
                 pass
     local_processes = []
     print(f"{EMERALD}[✓] All local processes terminated successfully.{RESET}")
+
+
+def launch_desktop_gui(gui_service_url="http://localhost:8003", worker_service_url="http://localhost:8004"):
+    """Launch the PyQt desktop dashboard if the environment supports it."""
+    try:
+        import PyQt6  # noqa: F401
+    except ImportError:
+        print(f"{GOLD}[INFO] PyQt6 is not installed, so the desktop GUI will not auto-launch.{RESET}")
+        print(f"{GOLD}       Install dependencies with 'pip install -r requirements.txt' or use launch.sh.{RESET}")
+        return
+
+    if sys.platform != "win32" and not os.environ.get("DISPLAY"):
+        print(f"{GOLD}[INFO] DISPLAY is not set, so the desktop GUI will not auto-launch in this session.{RESET}")
+        return
+
+    gui_env = os.environ.copy()
+    gui_env["MOHAWK_GUI_SERVICE_URL"] = gui_service_url
+    gui_env["MOHAWK_WORKER_SERVICE_URL"] = worker_service_url
+
+    print(f"{WHITE}Launching Desktop GUI dashboard...{RESET}")
+    try:
+        p_gui = subprocess.Popen([sys.executable, "mohawk_gui/main.py", "--port", "8003"], env=gui_env)
+        local_processes.append(p_gui)
+        print(f"{EMERALD}[✓] Desktop GUI launched successfully.{RESET}")
+    except Exception as e:
+        print(f"{CRIMSON}[ERROR] Failed to launch the desktop GUI: {e}{RESET}")
 
 
 def clean_environment():

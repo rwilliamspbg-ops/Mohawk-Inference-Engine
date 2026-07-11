@@ -40,8 +40,100 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     ports:
-      - "8003:8000"
+      - "8005:8000"
     environment:
       - PORT=8000
       - HOST=0.0.0.0
     command: python prototype/worker.py --host 0.0.0.0 --port 8000
+
+  mohawk-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mohawk-gui-dev
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./mohawk_gui:/app/mohawk_gui
+      - ./certs:/app/certs
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - QT_QPA_PLATFORM=offscreen
+      - DISCOVERY=true
+    command: >
+      python -m uvicorn prototype.gui_backend:app
+      --host 0.0.0.0 --port 8003
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  mohawk-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: mohawk-worker-dev
+    ports:
+      - "8004:8003"
+    volumes:
+      - ./models:/app/models
+      - ./certs:/app/certs
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - QT_QPA_PLATFORM=offscreen
+      - DISCOVERY=true
+    command: >
+      python -m uvicorn prototype.worker_secure:app
+      --host 0.0.0.0 --port 8003
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  mohawk-desktop-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mohawk-desktop-gui-dev
+    depends_on:
+      - mohawk-gui
+      - mohawk-worker
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DISPLAY=${DISPLAY}
+      - QT_QPA_PLATFORM=xcb
+      - MOHAWK_SKIP_DESKTOP_GUI=${MOHAWK_SKIP_DESKTOP_GUI:-0}
+      - MOHAWK_GUI_SERVICE_URL=http://host.docker.internal:8003
+      - MOHAWK_WORKER_SERVICE_URL=http://host.docker.internal:8004
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./certs:/app/certs
+      - ./logs:/app/logs
+    command: >
+      sh -c '
+      if [ "$$MOHAWK_SKIP_DESKTOP_GUI" = "1" ]; then
+        echo "Desktop GUI launch was skipped by the launcher.";
+        exit 0;
+      fi;
+      if [ -z "$$DISPLAY" ]; then
+        echo "DISPLAY is not set; skipping desktop GUI launch.";
+        exit 0;
+      fi;
+      until curl -fsS http://host.docker.internal:8003/health >/dev/null 2>&1; do
+        echo "Waiting for GUI backend...";
+        sleep 2;
+      done;
+      python mohawk_gui/main.py --port 8003
+      '
+    restart: "no"

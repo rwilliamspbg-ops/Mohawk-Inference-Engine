@@ -3,6 +3,7 @@
 """Mohawk Inference Engine - Live Wired GUI"""
 
 import json
+import os
 import sys
 from datetime import datetime
 
@@ -80,13 +81,18 @@ class MohawkGUI(QMainWindow):
         self.setGeometry(100, 100, 1400, 900)
 
         # API endpoints
-        self.gui_service_url = "http://localhost:8003"
-        self.worker_service_url = "http://localhost:8004"
+        self.gui_service_url = os.environ.get("MOHAWK_GUI_SERVICE_URL", "http://localhost:8003")
+        self.worker_service_url = os.environ.get("MOHAWK_WORKER_SERVICE_URL", "http://localhost:8004")
+
+        # Status bar must exist before any tab initialization or background
+        # updates can try to write to it.
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_bar.showMessage("Ready - Connecting to Docker backend services...")
 
         # Health check thread
         self.health_thread = WorkerHealthCheck(self.gui_service_url)
         self.health_thread.health_updated.connect(self.on_health_update)
-        self.health_thread.start()
 
         # Central widget
         central_widget = QWidget()
@@ -150,15 +156,13 @@ class MohawkGUI(QMainWindow):
         self.tabs.addTab(self.security_widget, "Security Center")
         self.tabs.addTab(self.history_widget, "History")
 
-        # Status bar
-        self.status_bar = QStatusBar()
-        self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("Ready - Connecting to Docker backend services...")
-
         # Timer for periodic updates
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.periodic_update)
         self.update_timer.start(5000)  # Update every 5 seconds
+
+        # Start background health updates after the UI is fully initialized.
+        self.health_thread.start()
 
     def on_health_update(self, health_info):
         """Handle health check updates."""
